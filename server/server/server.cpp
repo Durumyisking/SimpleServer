@@ -11,6 +11,8 @@
 
 void ErrorHandling(const std::wstring& message);
 void HandleClient(SOCKET clientSocket);
+void PrintServerInfo(sockaddr_in _localAddr);
+void PrintIPAddr();
 
 int main()
 {
@@ -51,44 +53,8 @@ int main()
 
     listen(serverSockets, SOMAXCONN);
 
-    char serverIP[20] = { 0 };
-    if (NULL == inet_ntop(AF_INET, &localAddr.sin_addr, serverIP, sizeof(serverIP))) // inet_ntop ip 주소를 문자열 형태로 변환
-    {
-        ErrorHandling(L"inet_ntop() error!");
-    }
-    else
-    {
-        std::cout << "[Server IP: " << serverIP << "::" << ntohs(localAddr.sin_port) << "]" << std::endl;
-    }
-
-    char hostname[256];
-    if (gethostname(hostname, sizeof(hostname)) != 0) {
-        std::cout << "Failed to get hostname" << std::endl;
-        WSACleanup();
-        return 1;
-    }
-
-    struct addrinfo* ipAddr = nullptr;
-    struct addrinfo hints {};
-    hints.ai_family = AF_INET;
-
-    if (getaddrinfo(hostname, nullptr, &hints, &ipAddr) != 0) {
-        std::cout << "Failed to get IP address" << std::endl;
-        WSACleanup();
-        return 1;
-    }
-
-    struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(ipAddr->ai_addr);
-    char ipAddress[INET_ADDRSTRLEN];
-    if (inet_ntop(AF_INET, &(addr->sin_addr), ipAddress, INET_ADDRSTRLEN) == nullptr) {
-        std::cout << "Failed to convert IP address to string" << std::endl;
-        WSACleanup();
-        return 1;
-    }
-
-    std::cout << "IP address: " << ipAddress << std::endl;
-
-    freeaddrinfo(ipAddr);
+    PrintServerInfo(localAddr);
+    PrintIPAddr();
 
     while (1)
     {
@@ -173,4 +139,51 @@ void ErrorHandling(const std::wstring& message)
 {
     std::wcout << message << std::endl;
     exit(1);
+}
+
+void PrintServerInfo(sockaddr_in _localAddr)
+{
+    char serverIP[20] = { 0 };
+    if (NULL == inet_ntop(AF_INET, &_localAddr.sin_addr, serverIP, sizeof(serverIP))) // inet_ntop ip 주소를 문자열 형태로 변환
+    {
+        ErrorHandling(L"inet_ntop() error!");
+    }
+    else
+    {
+        std::cout << "[Server IP: " << serverIP << "::" << ntohs(_localAddr.sin_port) << "]" << std::endl;
+    }
+
+}
+
+
+void PrintIPAddr()
+{
+    char hostname[256];
+    if (gethostname(hostname, sizeof(hostname)) != 0) {
+        std::cout << "Failed to get hostname" << std::endl;
+        WSACleanup();
+        return;
+    }
+
+    struct addrinfo* ipAddr = nullptr;
+    struct addrinfo hints {};
+    hints.ai_family = AF_INET;
+
+    if (getaddrinfo(hostname, nullptr, &hints, &ipAddr) != 0) {
+        std::cout << "Failed to get IP address" << std::endl;
+        WSACleanup();
+        return;
+    }
+
+    struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(ipAddr->ai_addr);
+    char ipAddress[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &(addr->sin_addr), ipAddress, INET_ADDRSTRLEN) == nullptr) {
+        std::cout << "Failed to convert IP address to string" << std::endl;
+        WSACleanup();
+        return;
+    }
+
+    std::cout << "IP address: " << ipAddress << std::endl;
+
+    freeaddrinfo(ipAddr);
 }
