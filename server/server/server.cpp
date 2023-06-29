@@ -9,58 +9,39 @@
 #define DEFAULT_PORT   8080
 #define MAX_BUFFER_SIZE 2048
 
-void ErrorHandling(const std::wstring& message);
-void HandleClient(SOCKET clientSocket);
+void Initialize();
+void CreateSocket();
+void SetServerDetails();
+void BindServerSocket();
+void ListenServerSocket();
+void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
+void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
+void ErrorHandling(const std::wstring& _message);
+void HandleClient(SOCKET _clientSocket);
 void PrintServerInfo(sockaddr_in _localAddr);
 void PrintIPAddr();
 
+WSADATA WSdata;
+WORD    Version;
+SOCKET ServerSocket; // 서버소켓 : 클라이언트 연결 수락 및 클라이언트 소켓 생성 담당  
+std::vector<SOCKET> ClientSockets; // 클라이언트 소켓들을 담는 벡터
+
+sockaddr_in LocalAddr; // 서버소켓이 바인딩 될 로컬주소
+
 int main()
 {
-    WSADATA wsd;
-    WORD version;
-    SOCKET serverSockets; // 서버소켓 : 클라이언트 연결 수락 및 클라이언트 소켓 생성 담당  
-    std::vector<SOCKET> clientSockets; // 클라이언트 소켓들을 담는 벡터
+    Initialize();
 
-    sockaddr_in localAddr; // 서버소켓이 바인딩 될 로컬주소
+    CreateSocket();
 
+    SetServerDetails();
 
-    // 이니셜라이즈
-    version = MAKEWORD(2, 2);
-    int wsResult = WSAStartup(version, &wsd);
-    if (wsResult != 0)
-    {
-        ErrorHandling(L"WSAStartup() error!");
-    }
-    else
-    {
-        puts("The library has been initialized.\n\n");
-    }
+    BindServerSocket();
 
-    serverSockets = socket(AF_INET, SOCK_STREAM, 0); // 서버 소켓 생성
-    if (serverSockets == INVALID_SOCKET)
-    {
-        ErrorHandling(L"socket() error!");
-    }
-    else
-    {
-        std::cout << "Server socket created.\n" << std::endl;
-    }
+    ListenServerSocket();
 
-    localAddr.sin_family = AF_INET; // IPv4로 주소 체계 설정
-    localAddr.sin_port = htons(DEFAULT_PORT); // 포트넘버 설정
-    localAddr.sin_addr.S_un.S_addr = INADDR_ANY; // 아이피 주소 설정 (INADDR_ANY 키워드로 모든 네트워크 인터페이스에서 들어오는 연결을 수락)
+    PrintServerInfo(LocalAddr);
 
-    if (bind(serverSockets, (sockaddr*)&localAddr, sizeof(localAddr)) == SOCKET_ERROR)
-    {
-        ErrorHandling(L"bind() error!");
-    }
-
-    if (listen(serverSockets, SOMAXCONN) == SOCKET_ERROR)
-    {
-        ErrorHandling(L"listen() error!");
-    }
-
-    PrintServerInfo(localAddr);
     PrintIPAddr();
 
     std::cout << "Waiting Clients..." << std::endl;
@@ -69,72 +50,52 @@ int main()
     {
         // 서버가 도는동안 새로운 클라이언트를 계속 받을거기 때문에 while문안에서 클라이언트 받음
         sockaddr_in clientAddr;
-        int clientAddrSize = sizeof(clientAddr);
-        SOCKET clientSocket = accept(serverSockets, (sockaddr*)&clientAddr, &clientAddrSize);
+        SOCKET clientSocket;
+        AcceptClient(clientAddr, clientSocket);
 
-        if (clientSocket == INVALID_SOCKET)
-        {
-            closesocket(serverSockets);
-            ErrorHandling(L"accept() error!");
-        }
-        else
-        {
-            char clientIP[INET_ADDRSTRLEN];
-            ZeroMemory(clientIP, INET_ADDRSTRLEN);
-            if (NULL == inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, INET_ADDRSTRLEN)) // inet_ntop ip 주소를 문자열 형태로 변환
-            {
-                ErrorHandling(L"inet_ntop() error!");
-            }
-            else
-            {
-                std::cout << "[Client IP: " << clientIP << "::" << ntohs(clientAddr.sin_port) << "]" << std::endl;
-                clientSockets.push_back(clientSocket);
-
-                std::thread clientThread(HandleClient, clientSocket);
-                clientThread.detach();
-            }
-        }
+        // 클라이언트 쓰레드함수 실행
+        JoinClient(clientAddr, clientSocket);        
     }
 
     // 연결된 클라이언트 소켓을 닫음
-    for (SOCKET clientSocket : clientSockets)
+    for (SOCKET clientSocket : ClientSockets)
     {
         closesocket(clientSocket);
     }
 
-    closesocket(serverSockets);
+    closesocket(ServerSocket);
 
     WSACleanup();
 
     return 0;
 }
 
-void HandleClient(SOCKET clientSocket)
+void HandleClient(SOCKET _clientSocket)
 {
-    char szBuffer[MAX_BUFFER_SIZE];
-    int ret = 0;
-    int sendret = 0;
+    char RecievedMessageBuffer[MAX_BUFFER_SIZE];
+    int recieveTest = 0;
+    int sendTest = 0;
 
     while (1)
     {
-        ret = recv(clientSocket, szBuffer, MAX_BUFFER_SIZE, 0);
-        if (ret == SOCKET_ERROR)
+        recieveTest = recv(_clientSocket, RecievedMessageBuffer, MAX_BUFFER_SIZE, 0);
+        if (recieveTest == SOCKET_ERROR)
         {
             ErrorHandling(L"recv() error!");
             break;
         }
-        else if (ret == 0)
+        else if (recieveTest == 0)
         {
             std::cout << "Client disconnected.\n" << std::endl;
             break;
         }
         else
         {
-            ZeroMemory(szBuffer, MAX_BUFFER_SIZE);
-            std::cout << "Received message from client:" << szBuffer << std::endl;
+            ZeroMemory(RecievedMessageBuffer, MAX_BUFFER_SIZE);
+            std::cout << "Received message from client:" << RecievedMessageBuffer << std::endl;
 
-            sendret = send(clientSocket, szBuffer, ret, 0);
-            if (sendret == SOCKET_ERROR)
+            sendTest = send(_clientSocket, RecievedMessageBuffer, recieveTest, 0);
+            if (sendTest == SOCKET_ERROR)
             {
                 ErrorHandling(L"send() error!");
                 break;
@@ -142,12 +103,93 @@ void HandleClient(SOCKET clientSocket)
         }
     }
 
-    closesocket(clientSocket);
+    closesocket(_clientSocket);
 }
 
-void ErrorHandling(const std::wstring& message)
+void Initialize()
 {
-    std::wcout << message << std::endl;
+    Version = MAKEWORD(2, 2);
+    int wsResult = WSAStartup(Version, &WSdata);
+    if (wsResult != 0)
+    {
+        ErrorHandling(L"WSAStartup() error!");
+    }
+    else
+    {
+        puts("The library has been initialized.\n\n");
+    }
+}
+
+void CreateSocket()
+{
+    ServerSocket = socket(AF_INET, SOCK_STREAM, 0); // 서버 소켓 생성
+    if (ServerSocket == INVALID_SOCKET)
+    {
+        ErrorHandling(L"socket() error!");
+    }
+    else
+    {
+        std::cout << "Server socket created.\n" << std::endl;
+    }
+}
+
+void SetServerDetails()
+{
+    LocalAddr.sin_family = AF_INET; // IPv4로 주소 체계 설정
+    LocalAddr.sin_port = htons(DEFAULT_PORT); // 포트넘버 설정
+    LocalAddr.sin_addr.S_un.S_addr = INADDR_ANY; // 아이피 주소 설정 (INADDR_ANY 키워드로 모든 네트워크 인터페이스에서 들어오는 연결을 수락)}
+}
+
+void BindServerSocket()
+{
+    if (bind(ServerSocket, (sockaddr*)&LocalAddr, sizeof(LocalAddr)) == SOCKET_ERROR)
+    {
+        ErrorHandling(L"bind() error!");
+    }
+}
+
+void ListenServerSocket()
+{
+    if (listen(ServerSocket, SOMAXCONN) == SOCKET_ERROR)
+    {
+        ErrorHandling(L"listen() error!");
+    }
+}
+
+void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
+{
+    int clientAddrSize = sizeof(_clientAddr);
+    SOCKET clientSocket = accept(ServerSocket, (sockaddr*)&_clientAddr, &clientAddrSize);
+
+    if (clientSocket == INVALID_SOCKET)
+    {
+        closesocket(_clientSocket);
+        closesocket(ServerSocket);
+        ErrorHandling(L"accept() error!");
+    }
+}
+
+void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
+{
+    char clientIP[INET_ADDRSTRLEN];
+    ZeroMemory(clientIP, INET_ADDRSTRLEN);
+    if (NULL == inet_ntop(AF_INET, &_clientAddr.sin_addr, clientIP, INET_ADDRSTRLEN)) // inet_ntop ip 주소를 문자열 형태로 변환
+    {
+        ErrorHandling(L"inet_ntop() error!");
+    }
+    else
+    {
+        std::cout << "[Client IP: " << clientIP << "::" << ntohs(_clientAddr.sin_port) << "]" << std::endl;
+        ClientSockets.push_back(_clientSocket);
+
+        std::thread clientThread(HandleClient, _clientSocket);
+        clientThread.detach();
+    }
+}
+
+void ErrorHandling(const std::wstring& _message)
+{
+    std::wcout << _message << std::endl;
     WSACleanup();
     exit(1);
 }
