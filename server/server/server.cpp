@@ -67,6 +67,7 @@ int main()
 
     while (1)
     {
+        // 서버가 도는동안 새로운 클라이언트를 계속 받을거기 때문에 while문안에서 클라이언트 받음
         sockaddr_in clientAddr;
         int clientAddrSize = sizeof(clientAddr);
         SOCKET clientSocket = accept(serverSockets, (sockaddr*)&clientAddr, &clientAddrSize);
