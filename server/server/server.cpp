@@ -6,8 +6,8 @@
 #include <vector>
 #include <thread>
 
-#define DEFAULT_PORT   5150
-#define DEFAULT_BUFFER 2048
+#define DEFAULT_PORT   8080
+#define MAX_BUFFER_SIZE 2048
 
 void ErrorHandling(const std::wstring& message);
 void HandleClient(SOCKET clientSocket);
@@ -17,12 +17,17 @@ void PrintIPAddr();
 int main()
 {
     WSADATA wsd;
+    WORD version;
     SOCKET serverSockets; // 서버소켓 : 클라이언트 연결 수락 및 클라이언트 소켓 생성 담당  
     std::vector<SOCKET> clientSockets; // 클라이언트 소켓들을 담는 벡터
 
-    struct sockaddr_in localAddr; // 서버소켓이 바인딩 될 로컬주소
+    sockaddr_in localAddr; // 서버소켓이 바인딩 될 로컬주소
 
-    if (WSAStartup(MAKEWORD(2, 2), &wsd) != 0)
+
+    // 이니셜라이즈
+    version = MAKEWORD(2, 2);
+    int wsResult = WSAStartup(version, &wsd);
+    if (wsResult != 0)
     {
         ErrorHandling(L"WSAStartup() error!");
     }
@@ -41,43 +46,47 @@ int main()
         std::cout << "Server socket created.\n" << std::endl;
     }
 
-    memset(&localAddr, 0, sizeof(localAddr));
-    localAddr.sin_addr.s_addr = htonl(INADDR_ANY); // 아이피 주소 설정 (INADDR_ANY 키워드로 모든 네트워크 인터페이스에서 들어오는 연결을 수락)
-    localAddr.sin_port = htons(DEFAULT_PORT); // 포트넘버 설정
     localAddr.sin_family = AF_INET; // IPv4로 주소 체계 설정
+    localAddr.sin_port = htons(DEFAULT_PORT); // 포트넘버 설정
+    localAddr.sin_addr.S_un.S_addr = INADDR_ANY; // 아이피 주소 설정 (INADDR_ANY 키워드로 모든 네트워크 인터페이스에서 들어오는 연결을 수락)
 
-    if (bind(serverSockets, (struct sockaddr*)&localAddr, sizeof(localAddr)) == SOCKET_ERROR)
+    if (bind(serverSockets, (sockaddr*)&localAddr, sizeof(localAddr)) == SOCKET_ERROR)
     {
         ErrorHandling(L"bind() error!");
     }
 
-    listen(serverSockets, SOMAXCONN);
+    if (listen(serverSockets, SOMAXCONN) == SOCKET_ERROR)
+    {
+        ErrorHandling(L"listen() error!");
+    }
 
     PrintServerInfo(localAddr);
     PrintIPAddr();
 
+    std::cout << "Waiting Clients..." << std::endl;
+
     while (1)
     {
-        struct sockaddr_in clientAddr;
+        sockaddr_in clientAddr;
         int clientAddrSize = sizeof(clientAddr);
-
-        SOCKET clientSocket = accept(serverSockets, (struct sockaddr*)&clientAddr, &clientAddrSize);
+        SOCKET clientSocket = accept(serverSockets, (sockaddr*)&clientAddr, &clientAddrSize);
 
         if (clientSocket == INVALID_SOCKET)
         {
+            closesocket(serverSockets);
             ErrorHandling(L"accept() error!");
         }
         else
         {
-            char clientIP[20] = { 0 };
-            if (NULL == inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, sizeof(clientIP))) // inet_ntop ip 주소를 문자열 형태로 변환
+            char clientIP[INET_ADDRSTRLEN];
+            ZeroMemory(clientIP, INET_ADDRSTRLEN);
+            if (NULL == inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, INET_ADDRSTRLEN)) // inet_ntop ip 주소를 문자열 형태로 변환
             {
                 ErrorHandling(L"inet_ntop() error!");
             }
             else
             {
                 std::cout << "[Client IP: " << clientIP << "::" << ntohs(clientAddr.sin_port) << "]" << std::endl;
-//                printf("[Client IP:%s, PORT: %d\n", clientIP, ntohs(clientAddr.sin_port)); // ntohs 포트넘버를 정수 형태로 변환
                 clientSockets.push_back(clientSocket);
 
                 std::thread clientThread(HandleClient, clientSocket);
@@ -101,13 +110,13 @@ int main()
 
 void HandleClient(SOCKET clientSocket)
 {
-    char szBuffer[DEFAULT_BUFFER];
+    char szBuffer[MAX_BUFFER_SIZE];
     int ret = 0;
     int sendret = 0;
 
     while (1)
     {
-        ret = recv(clientSocket, szBuffer, DEFAULT_BUFFER, 0);
+        ret = recv(clientSocket, szBuffer, MAX_BUFFER_SIZE, 0);
         if (ret == SOCKET_ERROR)
         {
             ErrorHandling(L"recv() error!");
@@ -120,7 +129,7 @@ void HandleClient(SOCKET clientSocket)
         }
         else
         {
-            szBuffer[ret] = '\0';
+            ZeroMemory(szBuffer, MAX_BUFFER_SIZE);
             std::cout << "Received message from client:" << szBuffer << std::endl;
 
             sendret = send(clientSocket, szBuffer, ret, 0);
@@ -138,6 +147,7 @@ void HandleClient(SOCKET clientSocket)
 void ErrorHandling(const std::wstring& message)
 {
     std::wcout << message << std::endl;
+    WSACleanup();
     exit(1);
 }
 
