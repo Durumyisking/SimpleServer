@@ -6,7 +6,7 @@ SOCKET           ServerManager::mSocket = {};
 sockaddr_in      ServerManager::mServerAddr = {};
 
 char             ServerManager::mTextRecieveBuffer[MAX_BUFFER_SIZE] = {};
-std::string      ServerManager::mServerIP ={};
+std::string      ServerManager::mServerIP = {};
 std::string      ServerManager::mMessage = {};
 
 int              ServerManager::mStartupTest = 0;
@@ -25,7 +25,7 @@ void ServerManager::initialize()
     }
     else
     {
-        std::cout << "The library has been initialized.\n";
+        std::cout << "Winsock2 library initialized.\n";
     }
 }
 
@@ -46,7 +46,7 @@ void ServerManager::createSocket()
     }
     else
     {
-        std::cout << "Socket has been created.\n";
+        std::cout << "Client socket created.\n";
     }
 }
 
@@ -67,7 +67,7 @@ void ServerManager::connectToServer()
     }
     else
     {
-        std::cout << "Connected to the server.\n";
+        std::cout << "Connected to the server.\n\n";
     }
 }
 

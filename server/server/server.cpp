@@ -30,15 +30,15 @@ sockaddr_in LocalAddr; // 서버소켓이 바인딩 될 로컬주소
 
 int main()
 {
-    Initialize();
+    Initialize(); // 라이브러리 초기화
 
-    CreateSocket();
+    CreateSocket(); // 서버 소켓 생성
 
-    SetServerDetails();
+    SetServerDetails(); // 서버 프토토콜, 아이피주소 및 포트번호 설정
 
-    BindServerSocket();
+    BindServerSocket(); // 소켓에 서버 디테일들 바인딩해줌 
 
-    ListenServerSocket();
+    ListenServerSocket(); // 클라이언트 받을 수 있는 상태로 대기
 
     PrintServerInfo(LocalAddr);
 
@@ -52,9 +52,6 @@ int main()
         sockaddr_in clientAddr;
         SOCKET clientSocket;
         AcceptClient(clientAddr, clientSocket);
-
-        // 클라이언트 쓰레드함수 실행
-        JoinClient(clientAddr, clientSocket);        
     }
 
     // 연결된 클라이언트 소켓을 닫음
@@ -91,10 +88,10 @@ void HandleClient(SOCKET _clientSocket)
         }
         else
         {
-            ZeroMemory(RecievedMessageBuffer, MAX_BUFFER_SIZE);
             std::cout << "Received message from client:" << RecievedMessageBuffer << std::endl;
 
             sendTest = send(_clientSocket, RecievedMessageBuffer, recieveTest, 0);
+            ZeroMemory(RecievedMessageBuffer, MAX_BUFFER_SIZE);
             if (sendTest == SOCKET_ERROR)
             {
                 ErrorHandling(L"send() error!");
@@ -116,7 +113,7 @@ void Initialize()
     }
     else
     {
-        puts("The library has been initialized.\n\n");
+        std::cout << "Winsock2 library initialized.\n";
     }
 }
 
@@ -129,7 +126,7 @@ void CreateSocket()
     }
     else
     {
-        std::cout << "Server socket created.\n" << std::endl;
+        std::cout << "Server socket created.\n\n";
     }
 }
 
@@ -150,7 +147,8 @@ void BindServerSocket()
 
 void ListenServerSocket()
 {
-    if (listen(ServerSocket, SOMAXCONN) == SOCKET_ERROR)
+    // 서버 소켓이 대기하는 연결 대기열 생성
+    if (listen(ServerSocket, SOMAXCONN) == SOCKET_ERROR) // SOMAXCONN (socket max connection) 운영체제마다 다름 윈도우에서는 1000 
     {
         ErrorHandling(L"listen() error!");
     }
@@ -159,13 +157,18 @@ void ListenServerSocket()
 void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
 {
     int clientAddrSize = sizeof(_clientAddr);
-    SOCKET clientSocket = accept(ServerSocket, (sockaddr*)&_clientAddr, &clientAddrSize);
+    _clientSocket = accept(ServerSocket, (sockaddr*)&_clientAddr, &clientAddrSize);
 
-    if (clientSocket == INVALID_SOCKET)
+    if (_clientSocket == INVALID_SOCKET)
     {
         closesocket(_clientSocket);
         closesocket(ServerSocket);
         ErrorHandling(L"accept() error!");
+    }
+    else
+    {
+        // 클라이언트 쓰레드함수 실행
+        JoinClient(_clientAddr, _clientSocket);
     }
 }
 
