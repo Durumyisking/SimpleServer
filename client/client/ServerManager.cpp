@@ -7,7 +7,7 @@ sockaddr_in      ServerManager::mServerAddr = {};
 
 char             ServerManager::mTextRecieveBuffer[MAX_BUFFER_SIZE] = {};
 std::string      ServerManager::mServerIP = {};
-std::string      ServerManager::mMessage = {};
+SendData         ServerManager::mData = {};
 
 int              ServerManager::mStartupTest = 0;
 int              ServerManager::mConnectTest = 0;
@@ -73,10 +73,16 @@ void ServerManager::connectToServer()
 
 void ServerManager::sendMessage()
 {
-    std::cout << "Send Message: ";
-    std::cin >> mMessage;
+    std::cout << "닉네임을 입력하세요 : ";
+    std::cin >> mData.name;
 
-    mSendTest = send(mSocket, mMessage.c_str(), mMessage.size() + 1, 0);
+    std::cout << "Send Message: ";
+    std::cin >> mData.message;
+
+    const char* Buffer[sizeof(SendData)];
+    memcpy(&mData, Buffer, sizeof(SendData));
+
+    mSendTest = send(mSocket, *Buffer, sizeof(SendData), 0);
     if (mSendTest == SOCKET_ERROR)
     {
         ErrorHandling(L"send() error!");
@@ -85,8 +91,8 @@ void ServerManager::sendMessage()
 
 void ServerManager::recieveMessage()
 {
-    ZeroMemory(mTextRecieveBuffer, MAX_BUFFER_SIZE);
-    mRecieveTest = recv(mSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
+    ZeroMemory(mTextRecieveBuffer, sizeof(SendData));
+    mRecieveTest = recv(mSocket, mTextRecieveBuffer, sizeof(SendData), 0);
     if (mRecieveTest == SOCKET_ERROR)
     {
         ErrorHandling(L"recv() error!");
@@ -109,3 +115,4 @@ void ServerManager::ErrorHandling(const std::wstring& message)
     WSACleanup();
     exit(1);
 }
+

@@ -9,6 +9,15 @@
 #define DEFAULT_PORT   8080
 #define MAX_BUFFER_SIZE 2048
 
+struct SendData
+{
+    std::string      message;
+    std::string      name;
+
+
+};
+
+
 void Initialize();
 void CreateSocket();
 void SetServerDetails();
@@ -67,41 +76,6 @@ int main()
     return 0;
 }
 
-void HandleClient(SOCKET _clientSocket)
-{
-    char RecievedMessageBuffer[MAX_BUFFER_SIZE];
-    int recieveTest = 0;
-    int sendTest = 0;
-
-    while (1)
-    {
-        recieveTest = recv(_clientSocket, RecievedMessageBuffer, MAX_BUFFER_SIZE, 0);
-        if (recieveTest == SOCKET_ERROR)
-        {
-            ErrorHandling(L"recv() error!");
-            break;
-        }
-        else if (recieveTest == 0)
-        {
-            std::cout << "Client disconnected.\n" << std::endl;
-            break;
-        }
-        else
-        {
-            std::cout << "Received message from client:" << RecievedMessageBuffer << std::endl;
-
-            sendTest = send(_clientSocket, RecievedMessageBuffer, recieveTest, 0);
-            ZeroMemory(RecievedMessageBuffer, MAX_BUFFER_SIZE);
-            if (sendTest == SOCKET_ERROR)
-            {
-                ErrorHandling(L"send() error!");
-                break;
-            }
-        }
-    }
-
-    closesocket(_clientSocket);
-}
 
 void Initialize()
 {
@@ -190,6 +164,45 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
     }
 }
 
+void HandleClient(SOCKET _clientSocket)
+{
+//    char RecievedMessageBuffer[MAX_BUFFER_SIZE];
+    char RecievedMessageBuffer[sizeof(SendData)];
+    int recieveTest = 0;
+    int sendTest = 0;
+
+    while (1)
+    {
+        recieveTest = recv(_clientSocket, RecievedMessageBuffer, sizeof(SendData), 0);
+        if (recieveTest == SOCKET_ERROR)
+        {
+            ErrorHandling(L"recv() error!");
+            break;
+        }
+        else if (recieveTest == 0)
+        {
+            std::cout << "Client disconnected.\n" << std::endl;
+            break;
+        }
+        else
+        {
+            SendData receivedData;
+            memcpy(&receivedData, RecievedMessageBuffer, sizeof(SendData));
+
+            std::cout << receivedData.name << "´ÔÀÇ ¸Þ½ÃÁö : " << receivedData.message << std::endl;
+            
+            sendTest = send(_clientSocket, RecievedMessageBuffer, recieveTest, 0);
+            ZeroMemory(RecievedMessageBuffer, sizeof(SendData));
+            if (sendTest == SOCKET_ERROR)
+            {
+                ErrorHandling(L"send() error!");
+                break;
+            }
+        }
+    }
+
+    closesocket(_clientSocket);
+}
 void ErrorHandling(const std::wstring& _message)
 {
     std::wcout << _message << std::endl;
