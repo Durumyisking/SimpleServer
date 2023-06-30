@@ -1,4 +1,5 @@
 #include "ServerManager.h"
+#include "UtilFunction.h"
 
 WSADATA          ServerManager::mWSdata = {};
 WORD             ServerManager::mWSVersion = {};
@@ -69,23 +70,33 @@ void ServerManager::connectToServer()
     {
         std::cout << "Connected to the server.\n\n";
     }
+
+    std::cout << "닉네임을 입력하세요 : ";
+    std::cin >> mData.name;
+
+    while (ID_SIZE < mData.name.size())
+    {
+        std::cout << "20자 이내의 닉네임을 입력하셔야합니다. 다시 입력해주세요.";
+        std::cout << "닉네임을 입력하세요 : ";
+        std::cin >> mData.name;
+    }
 }
 
 void ServerManager::sendMessage()
 {
-    std::cout << "닉네임을 입력하세요 : ";
-    std::cin >> mData.name;
-
     std::cout << "Send Message: ";
     std::cin >> mData.message;
 
-    const char* Buffer[sizeof(SendData)];
-    memcpy(&mData, Buffer, sizeof(SendData));
+    const char* Buffer = reinterpret_cast<const char*>(&mData);
 
-    mSendTest = send(mSocket, *Buffer, sizeof(SendData), 0);
+    mSendTest = send(mSocket, Buffer, sizeof(SendData), 0);
     if (mSendTest == SOCKET_ERROR)
     {
         ErrorHandling(L"send() error!");
+    }
+    else
+    {
+        UtilFunction::ClearConsoleLine();
     }
 }
 
@@ -97,9 +108,18 @@ void ServerManager::recieveMessage()
     {
         ErrorHandling(L"recv() error!");
     }
+    else if (mRecieveTest == 0)
+    {
+        ErrorHandling(L"Server disconnected.");
+    }
     else
     {
-        std::cout << "Received Message : " << mTextRecieveBuffer << std::endl;;
+        SendData* receivedData =  new SendData();
+        memcpy(receivedData, mTextRecieveBuffer, sizeof(SendData));
+    
+        std::cout << receivedData->name << "님의 메시지: " << receivedData->message << std::endl;
+
+        delete receivedData;
     }
 }
 
@@ -115,4 +135,3 @@ void ServerManager::ErrorHandling(const std::wstring& message)
     WSACleanup();
     exit(1);
 }
-

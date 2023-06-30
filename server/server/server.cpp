@@ -9,12 +9,12 @@
 #define DEFAULT_PORT   8080
 #define MAX_BUFFER_SIZE 2048
 
+#define ID_SIZE   20
+
 struct SendData
 {
-    std::string      message;
     std::string      name;
-
-
+    std::string      message;
 };
 
 
@@ -167,13 +167,14 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
 void HandleClient(SOCKET _clientSocket)
 {
 //    char RecievedMessageBuffer[MAX_BUFFER_SIZE];
-    char RecievedMessageBuffer[sizeof(SendData)];
     int recieveTest = 0;
     int sendTest = 0;
 
     while (1)
     {
-        recieveTest = recv(_clientSocket, RecievedMessageBuffer, sizeof(SendData), 0);
+        SendData ReceivedData = {};
+        // recv함수에 들어가면 client의 send를 받을 준비를 하는것
+        recieveTest = recv(_clientSocket, reinterpret_cast<char*>(&ReceivedData), sizeof(SendData), 0);
         if (recieveTest == SOCKET_ERROR)
         {
             ErrorHandling(L"recv() error!");
@@ -186,13 +187,10 @@ void HandleClient(SOCKET _clientSocket)
         }
         else
         {
-            SendData receivedData;
-            memcpy(&receivedData, RecievedMessageBuffer, sizeof(SendData));
-
-            std::cout << receivedData.name << "님의 메시지 : " << receivedData.message << std::endl;
+            std::cout << ReceivedData.name << "님의 메시지 : " << ReceivedData.message << std::endl;
             
-            sendTest = send(_clientSocket, RecievedMessageBuffer, recieveTest, 0);
-            ZeroMemory(RecievedMessageBuffer, sizeof(SendData));
+            sendTest = send(_clientSocket, reinterpret_cast<const char*>(&ReceivedData), recieveTest, 0);
+            ZeroMemory(&ReceivedData, sizeof(SendData));
             if (sendTest == SOCKET_ERROR)
             {
                 ErrorHandling(L"send() error!");
@@ -200,8 +198,6 @@ void HandleClient(SOCKET _clientSocket)
             }
         }
     }
-
-    closesocket(_clientSocket);
 }
 void ErrorHandling(const std::wstring& _message)
 {

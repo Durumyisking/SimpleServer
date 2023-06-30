@@ -8,13 +8,12 @@
 #define MAX_BUFFER_SIZE 2048
 
 #define LOCALHOST_IP "127.0.0.1" // 로컬 호스트 주소 (현재 컴퓨터 자체를 가리킴 서버와 클라이언트가 동일한 pc에서 실해오딕 통신 원할때 사용)
+#define ID_SIZE   20
 
 struct SendData
 {
-    std::string      message;
     std::string      name;
-
-
+    std::string      message;
 };
 
 class ServerManager
