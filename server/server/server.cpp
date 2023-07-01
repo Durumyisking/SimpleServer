@@ -11,7 +11,7 @@
 
 #define ID_SIZE   20
 
-struct SendData
+struct Dataform
 {
     std::string      name;
     std::string      message;
@@ -26,9 +26,11 @@ void ListenServerSocket();
 void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
 void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
 void ErrorHandling(const std::wstring& _message);
-void HandleClient(SOCKET _clientSocket);
+void HandleClient(SOCKET _clientSocket, Dataform _Data);
 void PrintServerInfo(sockaddr_in _localAddr);
 void PrintIPAddr();
+void SendMessageToAllClient(const char* _Message, int _MessageLength);
+bool ReceiveMessageFromClient(SOCKET _clientSocket, char* _Message, int _DataSize);
 
 WSADATA WSdata;
 WORD    Version;
@@ -159,38 +161,44 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
         std::cout << "[Client IP: " << clientIP << "::" << ntohs(_clientAddr.sin_port) << "]" << std::endl;
         ClientSockets.push_back(_clientSocket);
 
-        std::thread clientThread(HandleClient, _clientSocket);
-        clientThread.detach();
+        Dataform ReceivedData = {};
+        bool flag = ReceiveMessageFromClient(_clientSocket, reinterpret_cast<char*>(&ReceivedData), sizeof(Dataform));
+
+        if (flag)
+        {
+            std::string str = {};
+            str = ReceivedData.name;
+            str += " 님이 입장했습니다.";
+            SendMessageToAllClient(str.c_str(), str.length());
+                        
+            std::thread clientThread(HandleClient, _clientSocket, ReceivedData);
+            clientThread.detach();
+        }
+        ZeroMemory(&ReceivedData, sizeof(Dataform));
     }
 }
 
-void HandleClient(SOCKET _clientSocket)
+void HandleClient(SOCKET _clientSocket, Dataform _Data)
 {
-//    char RecievedMessageBuffer[MAX_BUFFER_SIZE];
-    int recieveTest = 0;
+//    char receivedMessageBuffer[MAX_BUFFER_SIZE];
+    int receiveTest = 0;
     int sendTest = 0;
 
     while (1)
     {
-        SendData ReceivedData = {};
-        // recv함수에 들어가면 client의 send를 받을 준비를 하는것
-        recieveTest = recv(_clientSocket, reinterpret_cast<char*>(&ReceivedData), sizeof(SendData), 0);
-        if (recieveTest == SOCKET_ERROR)
+
+        bool flag = ReceiveMessageFromClient(_clientSocket, reinterpret_cast<char*>(&_Data), sizeof(Dataform));
+        
+        if(flag)
         {
-            ErrorHandling(L"recv() error!");
-            break;
-        }
-        else if (recieveTest == 0)
-        {
-            std::cout << "Client disconnected.\n" << std::endl;
-            break;
-        }
-        else
-        {
-            std::cout << ReceivedData.name << "님의 메시지 : " << ReceivedData.message << std::endl;
+            std::cout << _Data.name << "님의 메시지 : " << _Data.message << std::endl;
             
-            sendTest = send(_clientSocket, reinterpret_cast<const char*>(&ReceivedData), recieveTest, 0);
-            ZeroMemory(&ReceivedData, sizeof(SendData));
+            for (size_t i = 0; i < ClientSockets.size(); i++)
+            {
+                sendTest = send(ClientSockets[i], reinterpret_cast<const char*>(&_Data), receiveTest, 0);
+            }
+//            sendTest = send(_clientSocket, reinterpret_cast<const char*>(&ReceivedData), receiveTest, 0);
+            ZeroMemory(&_Data, sizeof(Dataform));
             if (sendTest == SOCKET_ERROR)
             {
                 ErrorHandling(L"send() error!");
@@ -251,4 +259,42 @@ void PrintIPAddr()
     std::cout << "IP address: " << ipAddress << std::endl;
 
     freeaddrinfo(ipAddr);
+}
+
+
+
+///////////////////////////
+
+void SendMessageToAllClient(const char* _Message, int _MessageLength)
+{
+    int sendTest = 0;
+
+    for (size_t i = 0; i < ClientSockets.size(); i++)
+    {
+        sendTest = send(ClientSockets[i], _Message, _MessageLength, 0);
+    }
+    if (sendTest == SOCKET_ERROR)
+    {
+        ErrorHandling(L"send() error!");
+    }
+}
+
+bool ReceiveMessageFromClient(SOCKET _clientSocket, char* _Message, int _DataSize)
+{
+    int receiveTest = 0;
+    // recv함수에 들어가면 client의 send를 받을 준비를 하는것
+    receiveTest = recv(_clientSocket, _Message, _DataSize, 0);
+
+    if (receiveTest == SOCKET_ERROR)
+    {
+        ErrorHandling(L"recv() error!");
+        return false;
+    }
+    else if (receiveTest == 0)
+    {
+        std::cout << "Client disconnected.\n" << std::endl;
+        return false;
+    }
+
+    return true;
 }

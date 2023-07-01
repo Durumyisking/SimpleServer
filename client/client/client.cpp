@@ -24,9 +24,9 @@ int main()
     // 메시지 송수신
     while (1)
     {
-        ServerManager::sendMessage();
+        ServerManager::chatSend();
 
-        ServerManager::recieveMessage();
+        ServerManager::chatReceive();
     }
 
     // 서버 연결 해제

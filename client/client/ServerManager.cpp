@@ -8,12 +8,12 @@ sockaddr_in      ServerManager::mServerAddr = {};
 
 char             ServerManager::mTextRecieveBuffer[MAX_BUFFER_SIZE] = {};
 std::string      ServerManager::mServerIP = {};
-SendData         ServerManager::mData = {};
+Dataform         ServerManager::mData = {};
 
 int              ServerManager::mStartupTest = 0;
 int              ServerManager::mConnectTest = 0;
 int              ServerManager::mSendTest = 0;
-int              ServerManager::mRecieveTest = 0;
+int              ServerManager::mReceiveTest = 0;
 
 
 void ServerManager::initialize()
@@ -60,6 +60,15 @@ void ServerManager::convertIP()
 
 void ServerManager::connectToServer()
 {
+    std::cout << "닉네임을 입력하세요 : ";
+    std::cin >> mData.name;
+    while (ID_SIZE < mData.name.size())
+    {
+        std::cout << "20자 이내의 닉네임을 입력하셔야합니다. 다시 입력해주세요.";
+        std::cout << "닉네임을 입력하세요 : ";
+        std::cin >> mData.name;
+    }
+
     mConnectTest = connect(mSocket, reinterpret_cast<sockaddr*>(&mServerAddr), sizeof(mServerAddr));
     if (mConnectTest == SOCKET_ERROR)
     {
@@ -71,25 +80,18 @@ void ServerManager::connectToServer()
         std::cout << "Connected to the server.\n\n";
     }
 
-    std::cout << "닉네임을 입력하세요 : ";
-    std::cin >> mData.name;
-
-    while (ID_SIZE < mData.name.size())
-    {
-        std::cout << "20자 이내의 닉네임을 입력하셔야합니다. 다시 입력해주세요.";
-        std::cout << "닉네임을 입력하세요 : ";
-        std::cin >> mData.name;
-    }
+    sendData();
+    receiveMessage();
 }
 
-void ServerManager::sendMessage()
+void ServerManager::chatSend()
 {
     std::cout << "Send Message: ";
     std::cin >> mData.message;
 
     const char* Buffer = reinterpret_cast<const char*>(&mData);
 
-    mSendTest = send(mSocket, Buffer, sizeof(SendData), 0);
+    mSendTest = send(mSocket, Buffer, sizeof(Dataform), 0);
     if (mSendTest == SOCKET_ERROR)
     {
         ErrorHandling(L"send() error!");
@@ -100,27 +102,52 @@ void ServerManager::sendMessage()
     }
 }
 
-void ServerManager::recieveMessage()
+void ServerManager::chatReceive()
 {
-    ZeroMemory(mTextRecieveBuffer, sizeof(SendData));
-    mRecieveTest = recv(mSocket, mTextRecieveBuffer, sizeof(SendData), 0);
-    if (mRecieveTest == SOCKET_ERROR)
+    ZeroMemory(mTextRecieveBuffer, MAX_BUFFER_SIZE);
+    mReceiveTest = recv(mSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
+    if (mReceiveTest == SOCKET_ERROR)
     {
         ErrorHandling(L"recv() error!");
     }
-    else if (mRecieveTest == 0)
+    else if (mReceiveTest == 0)
     {
         ErrorHandling(L"Server disconnected.");
     }
     else
     {
-        SendData* receivedData =  new SendData();
-        memcpy(receivedData, mTextRecieveBuffer, sizeof(SendData));
-    
-        std::cout << receivedData->name << "님의 메시지: " << receivedData->message << std::endl;
+        Dataform receivedData = {};
+        memcpy(&receivedData, mTextRecieveBuffer, sizeof(Dataform));    
+        std::cout << receivedData.name << "님의 메시지: " << receivedData.message << std::endl;
+        ZeroMemory(&receivedData, sizeof(Dataform));
 
-        delete receivedData;
     }
+}
+
+void ServerManager::receiveMessage()
+{
+    mReceiveTest = 0;
+    // recv함수에 들어가면 client의 send를 받을 준비를 하는것
+    mReceiveTest = recv(mSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
+
+    if (mReceiveTest == SOCKET_ERROR)
+    {
+        ErrorHandling(L"recv() error!");
+        return;
+    }
+    else if (mReceiveTest == 0)
+    {
+        std::cout << "Client disconnected.\n" << std::endl;
+        return;
+    }
+    else
+    {
+        std::cout << mTextRecieveBuffer << std::endl;
+    }
+}
+
+void ServerManager::receiveData()
+{
 }
 
 void ServerManager::disConnect()
@@ -134,4 +161,23 @@ void ServerManager::ErrorHandling(const std::wstring& message)
     std::wcout << message << std::endl;
     WSACleanup();
     exit(1);
+}
+
+void ServerManager::sendMessage(std::string _Message)
+{
+}
+
+void ServerManager::sendData()
+{
+    const char* Buffer = reinterpret_cast<const char*>(&mData);
+
+    mSendTest = send(mSocket, Buffer, sizeof(Dataform), 0);
+    if (mSendTest == SOCKET_ERROR)
+    {
+        ErrorHandling(L"send() error!");
+    }
+    else
+    {
+        UtilFunction::ClearConsoleLine();
+    }
 }
