@@ -61,12 +61,12 @@ void ServerManager::convertIP()
 void ServerManager::connectToServer()
 {
     std::cout << "닉네임을 입력하세요 : ";
-    std::cin >> mData.name;
-    while (ID_SIZE < mData.name.size())
-    {
-        std::cout << "20자 이내의 닉네임을 입력하셔야합니다. 다시 입력해주세요.";
+    gets_s(mData.name);
+    while (ID_SIZE < sizeof(mData.name))
+    {       
+        ZeroMemory(mData.name, ID_SIZE);
+        std::cout << "20자 이내의 닉네임을 입력하셔야합니다. 다시 입력해주세요." << std::endl;
         std::cout << "닉네임을 입력하세요 : ";
-        std::cin >> mData.name;
     }
 
     mConnectTest = connect(mSocket, reinterpret_cast<sockaddr*>(&mServerAddr), sizeof(mServerAddr));
@@ -86,12 +86,14 @@ void ServerManager::connectToServer()
 
 void ServerManager::chatSend()
 {
-    std::cout << "Send Message: ";
-    std::cin >> mData.message;
+    std::cout << "Send Message: "; 
+    gets_s(mData.message);
 
     const char* Buffer = reinterpret_cast<const char*>(&mData);
 
-    mSendTest = send(mSocket, Buffer, sizeof(Dataform), 0);
+    mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
+    ZeroMemory(mData.message, MSG_SIZE);
+
     if (mSendTest == SOCKET_ERROR)
     {
         ErrorHandling(L"send() error!");
@@ -117,9 +119,9 @@ void ServerManager::chatReceive()
     else
     {
         Dataform receivedData = {};
-        memcpy(&receivedData, mTextRecieveBuffer, sizeof(Dataform));    
+        memcpy(&receivedData, mTextRecieveBuffer, DATA_SIZE);
         std::cout << receivedData.name << "님의 메시지: " << receivedData.message << std::endl;
-        ZeroMemory(&receivedData, sizeof(Dataform));
+        ZeroMemory(&receivedData, DATA_SIZE);
 
     }
 }
@@ -171,7 +173,7 @@ void ServerManager::sendData()
 {
     const char* Buffer = reinterpret_cast<const char*>(&mData);
 
-    mSendTest = send(mSocket, Buffer, sizeof(Dataform), 0);
+    mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
     if (mSendTest == SOCKET_ERROR)
     {
         ErrorHandling(L"send() error!");

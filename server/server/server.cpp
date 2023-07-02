@@ -10,11 +10,13 @@
 #define MAX_BUFFER_SIZE 2048
 
 #define ID_SIZE   20
+#define MSG_SIZE   255
+#define DATA_SIZE  275
 
 struct Dataform
 {
-    std::string      name;
-    std::string      message;
+    char      name[ID_SIZE];
+    char      message[MSG_SIZE];
 };
 
 
@@ -30,6 +32,10 @@ void HandleClient(SOCKET _clientSocket, Dataform _Data);
 void PrintServerInfo(sockaddr_in _localAddr);
 void PrintIPAddr();
 void SendMessageToAllClient(const char* _Message, int _MessageLength);
+
+void CloseClientSocket(SOCKET _clientSocket);
+void CloseServer();
+
 bool ReceiveMessageFromClient(SOCKET _clientSocket, char* _Message, int _DataSize);
 
 WSADATA WSdata;
@@ -38,6 +44,9 @@ SOCKET ServerSocket; // 서버소켓 : 클라이언트 연결 수락 및 클라이언트 소켓 생성 
 std::vector<SOCKET> ClientSockets; // 클라이언트 소켓들을 담는 벡터
 
 sockaddr_in LocalAddr; // 서버소켓이 바인딩 될 로컬주소
+
+int SendTest;
+int ReceiveTest;
 
 int main()
 {
@@ -66,14 +75,7 @@ int main()
     }
 
     // 연결된 클라이언트 소켓을 닫음
-    for (SOCKET clientSocket : ClientSockets)
-    {
-        closesocket(clientSocket);
-    }
-
-    closesocket(ServerSocket);
-
-    WSACleanup();
+    CloseServer();
 
     return 0;
 }
@@ -138,7 +140,6 @@ void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
     if (_clientSocket == INVALID_SOCKET)
     {
         closesocket(_clientSocket);
-        closesocket(ServerSocket);
         ErrorHandling(L"accept() error!");
     }
     else
@@ -162,9 +163,9 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
         ClientSockets.push_back(_clientSocket);
 
         Dataform ReceivedData = {};
-        bool flag = ReceiveMessageFromClient(_clientSocket, reinterpret_cast<char*>(&ReceivedData), sizeof(Dataform));
+        ReceiveTest = ReceiveMessageFromClient(_clientSocket, reinterpret_cast<char*>(&ReceivedData), DATA_SIZE);
 
-        if (flag)
+        if (ReceiveTest)
         {
             std::string str = {};
             str = ReceivedData.name;
@@ -174,35 +175,33 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
             std::thread clientThread(HandleClient, _clientSocket, ReceivedData);
             clientThread.detach();
         }
-        ZeroMemory(&ReceivedData, sizeof(Dataform));
+        ZeroMemory(&ReceivedData, DATA_SIZE);
     }
 }
 
 void HandleClient(SOCKET _clientSocket, Dataform _Data)
 {
 //    char receivedMessageBuffer[MAX_BUFFER_SIZE];
-    int receiveTest = 0;
-    int sendTest = 0;
+    ReceiveTest = 0;
+    SendTest = 0;
 
     while (1)
     {
-
-        bool flag = ReceiveMessageFromClient(_clientSocket, reinterpret_cast<char*>(&_Data), sizeof(Dataform));
-        
-        if(flag)
+        for (size_t i = 0; i < ClientSockets.size(); i++)
         {
-            std::cout << _Data.name << "님의 메시지 : " << _Data.message << std::endl;
-            
-            for (size_t i = 0; i < ClientSockets.size(); i++)
+            ReceiveTest = ReceiveMessageFromClient(ClientSockets[i], reinterpret_cast<char*>(&_Data), DATA_SIZE);
+        
+            if (ReceiveTest)
             {
-                sendTest = send(ClientSockets[i], reinterpret_cast<const char*>(&_Data), receiveTest, 0);
-            }
-//            sendTest = send(_clientSocket, reinterpret_cast<const char*>(&ReceivedData), receiveTest, 0);
-            ZeroMemory(&_Data, sizeof(Dataform));
-            if (sendTest == SOCKET_ERROR)
-            {
-                ErrorHandling(L"send() error!");
-                break;
+                std::cout << _Data.name << "님의 메시지 : " << _Data.message << std::endl;
+
+                SendTest = send(ClientSockets[i], reinterpret_cast<const char*>(&_Data), DATA_SIZE, 0);
+                if (SendTest == SOCKET_ERROR)
+                {
+                    ErrorHandling(L"send() error!");
+                    break;
+                }
+                ZeroMemory(&_Data, DATA_SIZE);
             }
         }
     }
@@ -210,7 +209,7 @@ void HandleClient(SOCKET _clientSocket, Dataform _Data)
 void ErrorHandling(const std::wstring& _message)
 {
     std::wcout << _message << std::endl;
-    WSACleanup();
+    CloseServer();
     exit(1);
 }
 
@@ -267,34 +266,79 @@ void PrintIPAddr()
 
 void SendMessageToAllClient(const char* _Message, int _MessageLength)
 {
-    int sendTest = 0;
+    SendTest = 0;
 
     for (size_t i = 0; i < ClientSockets.size(); i++)
     {
-        sendTest = send(ClientSockets[i], _Message, _MessageLength, 0);
+        SendTest = send(ClientSockets[i], _Message, _MessageLength, 0);
+        if (SendTest == SOCKET_ERROR)
+        {
+            ErrorHandling(L"send() error!");
+        }
     }
-    if (sendTest == SOCKET_ERROR)
+}
+
+void CloseClientSocket(SOCKET _clientSocket)
+{
+    for (size_t i = 0; i < ClientSockets.size(); i++)
     {
-        ErrorHandling(L"send() error!");
+        if (ClientSockets[i] == _clientSocket)
+        {
+            ClientSockets.erase(ClientSockets.begin() + i);
+            closesocket(_clientSocket);
+            return;
+        }
+    }
+}
+
+void CloseServer()
+{
+    for (SOCKET clientSocket : ClientSockets)
+    {
+        closesocket(clientSocket);
+    }
+
+    closesocket(ServerSocket);
+
+    WSACleanup();
+}
+
+void SendMessageToAllClientExceptSelf(SOCKET _clientSocket, const char* _Message, int _MessageLength)
+{
+    SendTest = 0;
+
+    for (size_t i = 0; i < ClientSockets.size(); i++)
+    {
+        if (_clientSocket != ClientSockets[i])
+        {
+            SendTest = send(ClientSockets[i], _Message, _MessageLength, 0);
+            if (SendTest == SOCKET_ERROR)
+            {
+                ErrorHandling(L"send() error!");
+            }
+        }
     }
 }
 
 bool ReceiveMessageFromClient(SOCKET _clientSocket, char* _Message, int _DataSize)
 {
-    int receiveTest = 0;
+    ReceiveTest = 0;
     // recv함수에 들어가면 client의 send를 받을 준비를 하는것
-    receiveTest = recv(_clientSocket, _Message, _DataSize, 0);
+    ReceiveTest = recv(_clientSocket, _Message, _DataSize, 0);
 
-    if (receiveTest == SOCKET_ERROR)
+    if (ReceiveTest == SOCKET_ERROR)
     {
-        ErrorHandling(L"recv() error!");
+        std::cout << "recv() error!.\n" << std::endl;
+        CloseClientSocket(_clientSocket);
         return false;
     }
-    else if (receiveTest == 0)
+    else if (ReceiveTest == 0)
     {
         std::cout << "Client disconnected.\n" << std::endl;
+        CloseClientSocket(_clientSocket);
         return false;
     }
 
+    
     return true;
 }
