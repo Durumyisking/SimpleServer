@@ -8,7 +8,7 @@ SOCKET           ServerManager::mSocket = {};
 sockaddr_in      ServerManager::mServerAddr = {};
 
 char             ServerManager::mTextRecieveBuffer[MAX_BUFFER_SIZE] = {};
-std::string      ServerManager::mServerIP = {};
+char             ServerManager::mServerIP[MAX_BUFFER_SIZE] = {};
 Dataform         ServerManager::mData = {};
 
 int              ServerManager::mStartupTest = 0;
@@ -37,7 +37,8 @@ void ServerManager::initialize()
 void ServerManager::setServerIP()
 {
     std::cout << "Input Connect Server IP: ";
-    std::cin >> mServerIP;
+    gets_s(mServerIP);
+
     // 127.0.0.1 = 로컬 호스트 주소 (현재 컴퓨터 자체를 가리킴 서버와 클라이언트가 동일한 pc에서 실행 및 통신 원할때 사용)
 //    mServerIP = LOCALHOST_IP;
 }
@@ -55,7 +56,7 @@ void ServerManager::convertIP()
 {
     mServerAddr.sin_family = AF_INET;
     mServerAddr.sin_port = htons(DEFAULT_PORT);
-    inet_pton(AF_INET, mServerIP.c_str(), &(mServerAddr.sin_addr));
+    inet_pton(AF_INET, mServerIP, &(mServerAddr.sin_addr));
 }
 
 void ServerManager::connectToServer()
