@@ -173,11 +173,13 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket, SOCKET& _client
 
         if (ReceiveTest)
         {
+            // 클라이언트 입장알림
             std::string str = {};
             str = ReceivedData.name;
             str += " 님이 입장했습니다.\n";
             SendMessageToAllClient(ClientJoinSockets, str.c_str(), str.length());
                         
+            // 새로 들어온 클랑
             std::thread clientThread(HandleClient, _clientSocket, ReceivedData);
             clientThread.detach();
         }

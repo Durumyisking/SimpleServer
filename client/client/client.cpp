@@ -14,7 +14,7 @@ int main()
     // 家南 积己
     ServerManager::createSocket(ServerManager::mJoinSocket);
     ServerManager::createSocket(ServerManager::mSocket);
-
+    std::cout << "Sockets are created.\n";
 
     // ip 牧滚飘
     ServerManager::convertIP();

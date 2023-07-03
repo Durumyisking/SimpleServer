@@ -49,10 +49,6 @@ void ServerManager::createSocket(SOCKET& _Socket)
     {
         ErrorHandling(L"socket() error");
     }
-    else
-    {
-        std::cout << "Client socket created.\n";
-    }
 }
 
 void ServerManager::convertIP()
@@ -81,6 +77,9 @@ void ServerManager::connectToServer()
 
     // 자기자신 입장알리는것
     receiveMessage(mJoinSocket);
+
+    std::cout << "연결되었습니다! 이제 자유롭게 메시지를 입력하세요" << std::endl;
+
 }
 
 void ServerManager::joinReceive()
@@ -109,7 +108,7 @@ void ServerManager::chatSend()
 {
     while (1)
     {
-        std::cout << "Send Message: ";
+//        std::cout << "Send Message: ";
         gets_s(mData.message);
 
         const char* Buffer = reinterpret_cast<const char*>(&mData);
