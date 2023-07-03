@@ -41,6 +41,7 @@ bool ReceiveMessageFromClient(SOCKET _clientSocket, char* _Message, int _DataSiz
 WSADATA WSdata;
 WORD    Version;
 SOCKET ServerSocket; // 서버소켓 : 클라이언트 연결 수락 및 클라이언트 소켓 생성 담당  
+std::vector<SOCKET> ClientJoinSockets; // 클라이언트 Join 데이터를 주고받을 소켓들을 담는 벡터
 std::vector<SOCKET> ClientSockets; // 클라이언트 소켓들을 담는 벡터
 
 sockaddr_in LocalAddr; // 서버소켓이 바인딩 될 로컬주소
@@ -70,6 +71,10 @@ int main()
     {
         // 서버가 도는동안 새로운 클라이언트를 계속 받을거기 때문에 while문안에서 클라이언트 받음
         sockaddr_in clientAddr;
+
+        SOCKET joinSocket;
+        //AcceptClient(clientAddr, clientSocket);
+
         SOCKET clientSocket;
         AcceptClient(clientAddr, clientSocket);
     }
@@ -169,7 +174,7 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
         {
             std::string str = {};
             str = ReceivedData.name;
-            str += " 님이 입장했습니다.";
+            str += " 님이 입장했습니다.\n";
             SendMessageToAllClient(str.c_str(), str.length());
                         
             std::thread clientThread(HandleClient, _clientSocket, ReceivedData);
@@ -187,22 +192,27 @@ void HandleClient(SOCKET _clientSocket, Dataform _Data)
 
     while (1)
     {
-        for (size_t i = 0; i < ClientSockets.size(); i++)
-        {
-            ReceiveTest = ReceiveMessageFromClient(ClientSockets[i], reinterpret_cast<char*>(&_Data), DATA_SIZE);
+        ReceiveTest = ReceiveMessageFromClient(_clientSocket, reinterpret_cast<char*>(&_Data), DATA_SIZE);
         
-            if (ReceiveTest)
-            {
-                std::cout << _Data.name << "님의 메시지 : " << _Data.message << std::endl;
+        // 정상적으로 받았으면 해당 메시지 모든 클라에게 보낸다.
+        if (ReceiveTest)
+        {
+            std::cout << _Data.name << "님의 메시지 : " << _Data.message << std::endl;
 
+            for (size_t i = 0; i < ClientSockets.size(); i++)
+            {
                 SendTest = send(ClientSockets[i], reinterpret_cast<const char*>(&_Data), DATA_SIZE, 0);
                 if (SendTest == SOCKET_ERROR)
                 {
                     ErrorHandling(L"send() error!");
                     break;
                 }
-                ZeroMemory(&_Data, DATA_SIZE);
             }
+            ZeroMemory(&_Data, DATA_SIZE);
+        }
+        else
+        {
+            break;
         }
     }
 }

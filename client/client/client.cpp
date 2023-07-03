@@ -22,11 +22,27 @@ int main()
     ServerManager::connectToServer();
 
     // 메시지 송수신
-    while (1)
-    {
-        ServerManager::chatSend();
+    // 플레이어 입장 채팅 송수신 전부 다른쓰레드에서 동작해야함
 
-        ServerManager::chatReceive();
+
+
+    while (ServerManager::mbWhileflag)
+    {
+        std::thread sendThread(ServerManager::chatSend);
+        sendThread.detach();
+
+        std::thread receiveThread(ServerManager::chatReceive);
+        receiveThread.detach();
+
+        // 여기서 서버가 닫혔는지 클라이언트가 종료할건지 말건지 판단한다
+        while (true)
+        {
+            if (!ServerManager::mbSwitch)
+            {
+                ServerManager::mbWhileflag = false;
+                break;
+            }
+        }
     }
 
     // 서버 연결 해제

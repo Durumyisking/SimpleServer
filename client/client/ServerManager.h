@@ -5,6 +5,7 @@
 #include <minwinbase.h> // zeroMemory 사용 위함
 #include <string>
 #include <stdio.h>
+#include <thread>
 
 #define DEFAULT_PORT   8080
 #define MAX_BUFFER_SIZE 2048
@@ -40,10 +41,14 @@ public:
     static void receiveMessage();
     static void receiveData();
 
+private:
+    static void makeConnection(SOCKET _Socket, sockaddr_in _ServerAddr);
+
 
 public:
     static WSADATA          mWSdata;
     static WORD             mWSVersion;
+    static SOCKET           mJoinSocket;
     static SOCKET           mSocket;
     static sockaddr_in      mServerAddr;
 
@@ -55,7 +60,12 @@ public:
     static int mStartupTest;
     static int mConnectTest;
     static int mSendTest;
-    static int mReceiveTest;
+
+
+    // while flag
+    static bool mbWhileflag;
+    static bool mbSwitch;
+
 
 };
 

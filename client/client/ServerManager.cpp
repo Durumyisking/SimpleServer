@@ -3,6 +3,7 @@
 
 WSADATA          ServerManager::mWSdata = {};
 WORD             ServerManager::mWSVersion = {};
+SOCKET           ServerManager::mJoinSocket = {};
 SOCKET           ServerManager::mSocket = {};
 sockaddr_in      ServerManager::mServerAddr = {};
 
@@ -13,7 +14,10 @@ Dataform         ServerManager::mData = {};
 int              ServerManager::mStartupTest = 0;
 int              ServerManager::mConnectTest = 0;
 int              ServerManager::mSendTest = 0;
-int              ServerManager::mReceiveTest = 0;
+
+bool ServerManager::mbWhileflag = true;
+bool ServerManager::mbSwitch = true;
+
 
 
 void ServerManager::initialize()
@@ -34,7 +38,7 @@ void ServerManager::setServerIP()
 {
     //std::cout << "Input Connect Server IP: ";
     //std::cin >> serverIP;
-    // 127.0.0.1 = 로컬 호스트 주소 (현재 컴퓨터 자체를 가리킴 서버와 클라이언트가 동일한 pc에서 실해오딕 통신 원할때 사용)
+    // 127.0.0.1 = 로컬 호스트 주소 (현재 컴퓨터 자체를 가리킴 서버와 클라이언트가 동일한 pc에서 실행 및 통신 원할때 사용)
     mServerIP = LOCALHOST_IP;
 }
 
@@ -69,16 +73,10 @@ void ServerManager::connectToServer()
         std::cout << "닉네임을 입력하세요 : ";
     }
 
-    mConnectTest = connect(mSocket, reinterpret_cast<sockaddr*>(&mServerAddr), sizeof(mServerAddr));
-    if (mConnectTest == SOCKET_ERROR)
-    {
-        closesocket(mSocket);
-        ErrorHandling(L"connect() error!");
-    }
-    else
-    {
-        std::cout << "Connected to the server.\n\n";
-    }
+    makeConnection(mJoinSocket, mServerAddr);
+
+    makeConnection(mSocket, mServerAddr);
+
 
     sendData();
     receiveMessage();
@@ -86,58 +84,65 @@ void ServerManager::connectToServer()
 
 void ServerManager::chatSend()
 {
-    std::cout << "Send Message: "; 
-    gets_s(mData.message);
-
-    const char* Buffer = reinterpret_cast<const char*>(&mData);
-
-    mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
-    ZeroMemory(mData.message, MSG_SIZE);
-
-    if (mSendTest == SOCKET_ERROR)
+    while (1)
     {
-        ErrorHandling(L"send() error!");
-    }
-    else
-    {
-        UtilFunction::ClearConsoleLine();
+        std::cout << "Send Message: ";
+        gets_s(mData.message);
+
+        const char* Buffer = reinterpret_cast<const char*>(&mData);
+
+        mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
+        ZeroMemory(mData.message, MSG_SIZE);
+
+        if (mSendTest == SOCKET_ERROR)
+        {
+            ErrorHandling(L"send() error!");
+        }
+        else
+        {
+            UtilFunction::ClearConsoleLine();
+        }
     }
 }
 
 void ServerManager::chatReceive()
 {
-    ZeroMemory(mTextRecieveBuffer, MAX_BUFFER_SIZE);
-    mReceiveTest = recv(mSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
-    if (mReceiveTest == SOCKET_ERROR)
+    while (1)
     {
-        ErrorHandling(L"recv() error!");
-    }
-    else if (mReceiveTest == 0)
-    {
-        ErrorHandling(L"Server disconnected.");
-    }
-    else
-    {
-        Dataform receivedData = {};
-        memcpy(&receivedData, mTextRecieveBuffer, DATA_SIZE);
-        std::cout << receivedData.name << "님의 메시지: " << receivedData.message << std::endl;
-        ZeroMemory(&receivedData, DATA_SIZE);
+        int ReceiveTest = 0;
+        ZeroMemory(mTextRecieveBuffer, MAX_BUFFER_SIZE);
+        ReceiveTest = recv(mSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
+        if (ReceiveTest == SOCKET_ERROR)
+        {
+            ErrorHandling(L"recv() error!");
+        }
+        else if (ReceiveTest == 0)
+        {
+            ErrorHandling(L"Server disconnected.");
+        }
+        else
+        {
+            Dataform receivedData = {};
+            memcpy(&receivedData, mTextRecieveBuffer, DATA_SIZE);
+            std::cout << receivedData.name << "님의 메시지: " << receivedData.message << std::endl;
+            ZeroMemory(&receivedData, DATA_SIZE);
 
+        }
     }
 }
 
 void ServerManager::receiveMessage()
 {
-    mReceiveTest = 0;
+    int ReceiveTest = 0;
     // recv함수에 들어가면 client의 send를 받을 준비를 하는것
-    mReceiveTest = recv(mSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
+    ReceiveTest = recv(mSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
 
-    if (mReceiveTest == SOCKET_ERROR)
+    if (ReceiveTest == SOCKET_ERROR)
     {
         ErrorHandling(L"recv() error!");
         return;
     }
-    else if (mReceiveTest == 0)
+    else if (ReceiveTest == 0)
     {
         std::cout << "Client disconnected.\n" << std::endl;
         return;
@@ -152,6 +157,21 @@ void ServerManager::receiveData()
 {
 }
 
+void ServerManager::makeConnection(SOCKET _Socket, sockaddr_in _ServerAddr)
+{
+    mConnectTest = connect(_Socket, reinterpret_cast<sockaddr*>(&_ServerAddr), sizeof(_ServerAddr));
+    if (mConnectTest == SOCKET_ERROR)
+    {
+        closesocket(_Socket);
+        ErrorHandling(L"connect() error!");
+    }
+    else
+    {
+        std::cout << "Connected to the server.\n\n";
+    }
+
+}
+
 void ServerManager::disConnect()
 {
     WSACleanup();
@@ -161,8 +181,10 @@ void ServerManager::disConnect()
 void ServerManager::ErrorHandling(const std::wstring& message)
 {
     std::wcout << message << std::endl;
-    WSACleanup();
-    exit(1);
+    disConnect();
+    mbSwitch = false;
+
+//    exit(1);
 }
 
 void ServerManager::sendMessage(std::string _Message)
