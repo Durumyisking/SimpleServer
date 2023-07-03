@@ -36,10 +36,10 @@ void ServerManager::initialize()
 
 void ServerManager::setServerIP()
 {
-    //std::cout << "Input Connect Server IP: ";
-    //std::cin >> serverIP;
+    std::cout << "Input Connect Server IP: ";
+    std::cin >> mServerIP;
     // 127.0.0.1 = 로컬 호스트 주소 (현재 컴퓨터 자체를 가리킴 서버와 클라이언트가 동일한 pc에서 실행 및 통신 원할때 사용)
-    mServerIP = LOCALHOST_IP;
+//    mServerIP = LOCALHOST_IP;
 }
 
 void ServerManager::createSocket(SOCKET& _Socket)
