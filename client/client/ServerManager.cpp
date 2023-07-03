@@ -42,10 +42,10 @@ void ServerManager::setServerIP()
     mServerIP = LOCALHOST_IP;
 }
 
-void ServerManager::createSocket()
+void ServerManager::createSocket(SOCKET& _Socket)
 {
-    mSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (mSocket == INVALID_SOCKET)
+    _Socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (_Socket == INVALID_SOCKET)
     {
         ErrorHandling(L"socket() error");
     }
@@ -74,12 +74,35 @@ void ServerManager::connectToServer()
     }
 
     makeConnection(mJoinSocket, mServerAddr);
-
     makeConnection(mSocket, mServerAddr);
-
+    std::cout << "Connected to the server.\n\n";
 
     sendData();
-    receiveMessage();
+
+    // 자기자신 입장알리는것
+    receiveMessage(mJoinSocket);
+}
+
+void ServerManager::joinReceive()
+{
+    while (1)
+    {
+        int ReceiveTest = 0;
+        ZeroMemory(mTextRecieveBuffer, MAX_BUFFER_SIZE);
+        ReceiveTest = recv(mJoinSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
+        if (ReceiveTest == SOCKET_ERROR)
+        {
+            ErrorHandling(L"recv() error!");
+        }
+        else if (ReceiveTest == 0)
+        {
+            ErrorHandling(L"Server disconnected.");
+        }
+        else
+        {
+            std::cout << mTextRecieveBuffer << std::endl;
+        }
+    }
 }
 
 void ServerManager::chatSend()
@@ -131,11 +154,11 @@ void ServerManager::chatReceive()
     }
 }
 
-void ServerManager::receiveMessage()
+void ServerManager::receiveMessage(SOCKET _Socket)
 {
     int ReceiveTest = 0;
     // recv함수에 들어가면 client의 send를 받을 준비를 하는것
-    ReceiveTest = recv(mSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
+    ReceiveTest = recv(_Socket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
 
     if (ReceiveTest == SOCKET_ERROR)
     {
@@ -165,11 +188,6 @@ void ServerManager::makeConnection(SOCKET _Socket, sockaddr_in _ServerAddr)
         closesocket(_Socket);
         ErrorHandling(L"connect() error!");
     }
-    else
-    {
-        std::cout << "Connected to the server.\n\n";
-    }
-
 }
 
 void ServerManager::disConnect()

@@ -27,18 +27,21 @@ class ServerManager
 public:
     static void initialize();
     static void setServerIP();
-    static void createSocket();
+    static void createSocket(SOCKET& _Socket);
     static void convertIP();
     static void connectToServer();
+
+    static void joinReceive();
     static void chatSend();
     static void chatReceive();
+
     static void disConnect();
 
     static void ErrorHandling(const std::wstring& message);
     static void sendMessage(std::string _Message);
     static void sendData();
 
-    static void receiveMessage();
+    static void receiveMessage(SOCKET _Socket);
     static void receiveData();
 
 private:

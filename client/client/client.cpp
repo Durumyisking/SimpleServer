@@ -12,7 +12,8 @@ int main()
     ServerManager::setServerIP();
 
     // 家南 积己
-    ServerManager::createSocket();
+    ServerManager::createSocket(ServerManager::mJoinSocket);
+    ServerManager::createSocket(ServerManager::mSocket);
 
 
     // ip 牧滚飘
@@ -28,6 +29,9 @@ int main()
 
     while (ServerManager::mbWhileflag)
     {
+        std::thread joinThread(ServerManager::joinReceive);
+        joinThread.detach();
+
         std::thread sendThread(ServerManager::chatSend);
         sendThread.detach();
 

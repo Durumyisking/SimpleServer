@@ -25,13 +25,13 @@ void CreateSocket();
 void SetServerDetails();
 void BindServerSocket();
 void ListenServerSocket();
-void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
-void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
+void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket, SOCKET& _clientJoinSocket);
+void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket, SOCKET& _clientJoinSocket);
 void ErrorHandling(const std::wstring& _message);
 void HandleClient(SOCKET _clientSocket, Dataform _Data);
 void PrintServerInfo(sockaddr_in _localAddr);
 void PrintIPAddr();
-void SendMessageToAllClient(const char* _Message, int _MessageLength);
+void SendMessageToAllClient(std::vector<SOCKET> _Sockets, const char* _Message, int _MessageLength);
 
 void CloseClientSocket(SOCKET _clientSocket);
 void CloseServer();
@@ -73,10 +73,9 @@ int main()
         sockaddr_in clientAddr;
 
         SOCKET joinSocket;
-        //AcceptClient(clientAddr, clientSocket);
 
         SOCKET clientSocket;
-        AcceptClient(clientAddr, clientSocket);
+        AcceptClient(clientAddr, clientSocket, joinSocket);
     }
 
     // 연결된 클라이언트 소켓을 닫음
@@ -137,9 +136,10 @@ void ListenServerSocket()
     }
 }
 
-void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
+void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket,  SOCKET& _clientJoinSocket)
 {
     int clientAddrSize = sizeof(_clientAddr);
+    _clientJoinSocket = accept(ServerSocket, (sockaddr*)&_clientAddr, &clientAddrSize);
     _clientSocket = accept(ServerSocket, (sockaddr*)&_clientAddr, &clientAddrSize);
 
     if (_clientSocket == INVALID_SOCKET)
@@ -150,11 +150,11 @@ void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
     else
     {
         // 클라이언트 쓰레드함수 실행
-        JoinClient(_clientAddr, _clientSocket);
+        JoinClient(_clientAddr, _clientSocket, _clientJoinSocket);
     }
 }
 
-void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
+void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket, SOCKET& _clientJoinSocket)
 {
     char clientIP[INET_ADDRSTRLEN];
     ZeroMemory(clientIP, INET_ADDRSTRLEN);
@@ -165,6 +165,7 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
     else
     {
         std::cout << "[Client IP: " << clientIP << "::" << ntohs(_clientAddr.sin_port) << "]" << std::endl;
+        ClientJoinSockets.push_back(_clientJoinSocket);
         ClientSockets.push_back(_clientSocket);
 
         Dataform ReceivedData = {};
@@ -175,7 +176,7 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
             std::string str = {};
             str = ReceivedData.name;
             str += " 님이 입장했습니다.\n";
-            SendMessageToAllClient(str.c_str(), str.length());
+            SendMessageToAllClient(ClientJoinSockets, str.c_str(), str.length());
                         
             std::thread clientThread(HandleClient, _clientSocket, ReceivedData);
             clientThread.detach();
@@ -273,14 +274,13 @@ void PrintIPAddr()
 
 
 ///////////////////////////
-
-void SendMessageToAllClient(const char* _Message, int _MessageLength)
+void SendMessageToAllClient(std::vector<SOCKET> _Sockets, const char* _Message, int _MessageLength)
 {
     SendTest = 0;
 
-    for (size_t i = 0; i < ClientSockets.size(); i++)
+    for (size_t i = 0; i < _Sockets.size(); i++)
     {
-        SendTest = send(ClientSockets[i], _Message, _MessageLength, 0);
+        SendTest = send(_Sockets[i], _Message, _MessageLength, 0);
         if (SendTest == SOCKET_ERROR)
         {
             ErrorHandling(L"send() error!");
