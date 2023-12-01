@@ -13,10 +13,20 @@
 #define MSG_SIZE   255
 #define DATA_SIZE  275
 
+enum class ePacketType
+{
+    UserJoin,
+    Message,
+
+    End,
+};
+
+
 struct Dataform
 {
-    char      name[ID_SIZE];
-    char      message[MSG_SIZE];
+    ePacketType     PacketType;
+    char            name[ID_SIZE];
+    char            message[MSG_SIZE];
 };
 
 
@@ -25,8 +35,8 @@ void CreateSocket();
 void SetServerDetails();
 void BindServerSocket();
 void ListenServerSocket();
-void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket, SOCKET& _clientJoinSocket);
-void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket, SOCKET& _clientJoinSocket);
+void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
+void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
 void ErrorHandling(const std::wstring& _message);
 void HandleClient(SOCKET _clientSocket, Dataform _Data);
 void PrintServerInfo(sockaddr_in _localAddr);
@@ -41,7 +51,6 @@ bool ReceiveMessageFromClient(SOCKET _clientSocket, char* _Message, int _DataSiz
 WSADATA WSdata;
 WORD    Version;
 SOCKET ServerSocket; // 서버소켓 : 클라이언트 연결 수락 및 클라이언트 소켓 생성 담당  
-std::vector<SOCKET> ClientJoinSockets; // 클라이언트 Join 데이터를 주고받을 소켓들을 담는 벡터
 std::vector<SOCKET> ClientSockets; // 클라이언트 소켓들을 담는 벡터
 
 sockaddr_in LocalAddr; // 서버소켓이 바인딩 될 로컬주소
@@ -75,7 +84,7 @@ int main()
         SOCKET joinSocket;
 
         SOCKET clientSocket;
-        AcceptClient(clientAddr, clientSocket, joinSocket);
+        AcceptClient(clientAddr, clientSocket);
     }
 
     // 연결된 클라이언트 소켓을 닫음
@@ -136,10 +145,10 @@ void ListenServerSocket()
     }
 }
 
-void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket,  SOCKET& _clientJoinSocket)
+void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
 {
     int clientAddrSize = sizeof(_clientAddr);
-    _clientJoinSocket = accept(ServerSocket, (sockaddr*)&_clientAddr, &clientAddrSize);
+   
     _clientSocket = accept(ServerSocket, (sockaddr*)&_clientAddr, &clientAddrSize);
 
     if (_clientSocket == INVALID_SOCKET)
@@ -150,11 +159,11 @@ void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket,  SOCKET& _cli
     else
     {
         // 클라이언트 쓰레드함수 실행
-        JoinClient(_clientAddr, _clientSocket, _clientJoinSocket);
+        JoinClient(_clientAddr, _clientSocket);
     }
 }
 
-void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket, SOCKET& _clientJoinSocket)
+void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
 {
     char clientIP[INET_ADDRSTRLEN];
     ZeroMemory(clientIP, INET_ADDRSTRLEN);
@@ -165,7 +174,7 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket, SOCKET& _client
     else
     {
         std::cout << "[Client IP: " << clientIP << "::" << ntohs(_clientAddr.sin_port) << "]" << std::endl;
-        ClientJoinSockets.push_back(_clientJoinSocket);
+        
         ClientSockets.push_back(_clientSocket);
 
         Dataform ReceivedData = {};
@@ -177,7 +186,7 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket, SOCKET& _client
             std::string str = {};
             str = ReceivedData.name;
             str += " 님이 입장했습니다.\n";
-            SendMessageToAllClient(ClientJoinSockets, str.c_str(), str.length());
+            SendMessageToAllClient(ClientSockets, str.c_str(), str.length());
                         
             // 새로 들어온 클랑
             std::thread clientThread(HandleClient, _clientSocket, ReceivedData);

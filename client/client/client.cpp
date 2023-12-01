@@ -12,7 +12,6 @@ int main()
     ServerManager::setServerIP();
 
     // 家南 积己
-    ServerManager::createSocket(ServerManager::mJoinSocket);
     ServerManager::createSocket(ServerManager::mSocket);
     std::cout << "Sockets are created.\n";
 
@@ -29,10 +28,7 @@ int main()
 
     while (ServerManager::mbWhileflag)
     {
-        std::thread joinThread(ServerManager::joinReceive);
-        joinThread.detach();
-
-        std::thread sendThread(ServerManager::chatSend);
+        std::thread sendThread(ServerManager::sendMessage, ePacketType::Message);
         sendThread.detach();
 
         std::thread receiveThread(ServerManager::chatReceive);

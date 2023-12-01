@@ -3,11 +3,10 @@
 
 WSADATA          ServerManager::mWSdata = {};
 WORD             ServerManager::mWSVersion = {};
-SOCKET           ServerManager::mJoinSocket = {};
 SOCKET           ServerManager::mSocket = {};
 sockaddr_in      ServerManager::mServerAddr = {};
 
-char             ServerManager::mTextRecieveBuffer[MAX_BUFFER_SIZE] = {};
+char             ServerManager::mRecieveBuffer[MAX_BUFFER_SIZE] = {};
 char             ServerManager::mServerIP[MAX_BUFFER_SIZE] = {};
 Dataform         ServerManager::mData = {};
 
@@ -70,71 +69,25 @@ void ServerManager::connectToServer()
         std::cout << "닉네임을 입력하세요 : ";
     }
 
-    makeConnection(mJoinSocket, mServerAddr);
     makeConnection(mSocket, mServerAddr);
     std::cout << "Connected to the server.\n\n";
 
-    sendData();
-
     // 자기자신 입장알리는것
-    receiveMessage(mJoinSocket);
+    sendMessage(ePacketType::UserJoin);
+    receiveMessage();
 
     std::cout << "연결되었습니다! 이제 자유롭게 메시지를 입력하세요" << std::endl;
 
 }
 
-void ServerManager::joinReceive()
-{
-    while (1)
-    {
-        int ReceiveTest = 0;
-        ZeroMemory(mTextRecieveBuffer, MAX_BUFFER_SIZE);
-        ReceiveTest = recv(mJoinSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
-        if (ReceiveTest == SOCKET_ERROR)
-        {
-            ErrorHandling(L"recv() error!");
-        }
-        else if (ReceiveTest == 0)
-        {
-            ErrorHandling(L"Server disconnected.");
-        }
-        else
-        {
-            std::cout << mTextRecieveBuffer << std::endl;
-        }
-    }
-}
-
-void ServerManager::chatSend()
-{
-    while (1)
-    {
-//        std::cout << "Send Message: ";
-        gets_s(mData.message);
-
-        const char* Buffer = reinterpret_cast<const char*>(&mData);
-
-        mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
-        ZeroMemory(mData.message, MSG_SIZE);
-
-        if (mSendTest == SOCKET_ERROR)
-        {
-            ErrorHandling(L"send() error!");
-        }
-        else
-        {
-            UtilFunction::ClearConsoleLine();
-        }
-    }
-}
 
 void ServerManager::chatReceive()
 {
     while (1)
     {
         int ReceiveTest = 0;
-        ZeroMemory(mTextRecieveBuffer, MAX_BUFFER_SIZE);
-        ReceiveTest = recv(mSocket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
+        ZeroMemory(mRecieveBuffer, MAX_BUFFER_SIZE);
+        ReceiveTest = recv(mSocket, mRecieveBuffer, MAX_BUFFER_SIZE, 0);
         if (ReceiveTest == SOCKET_ERROR)
         {
             ErrorHandling(L"recv() error!");
@@ -146,19 +99,47 @@ void ServerManager::chatReceive()
         else
         {
             Dataform receivedData = {};
-            memcpy(&receivedData, mTextRecieveBuffer, DATA_SIZE);
+            memcpy(&receivedData, mRecieveBuffer, DATA_SIZE);
             std::cout << receivedData.name << "님의 메시지: " << receivedData.message << std::endl;
             ZeroMemory(&receivedData, DATA_SIZE);
-
         }
     }
 }
 
-void ServerManager::receiveMessage(SOCKET _Socket)
+void ServerManager::sendMessage(ePacketType packetType)
+{
+    mData.PacketType = packetType;
+
+    switch (mData.PacketType)
+    {
+    case ePacketType::UserJoin:
+        break;
+    case ePacketType::Message:
+        gets_s(mData.message);
+        break;
+    default:
+        break;
+    }
+
+    const char* Buffer = reinterpret_cast<const char*>(&mData);
+
+    mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
+    if (mSendTest == SOCKET_ERROR)
+    {
+        ErrorHandling(L"send() error!");
+    }
+    else
+    {
+        UtilFunction::ClearConsoleLine();
+    }
+}
+
+void ServerManager::receiveMessage()
 {
     int ReceiveTest = 0;
     // recv함수에 들어가면 client의 send를 받을 준비를 하는것
-    ReceiveTest = recv(_Socket, mTextRecieveBuffer, MAX_BUFFER_SIZE, 0);
+    ZeroMemory(mRecieveBuffer, MAX_BUFFER_SIZE);
+    ReceiveTest = recv(mSocket, mRecieveBuffer, MAX_BUFFER_SIZE, 0);
 
     if (ReceiveTest == SOCKET_ERROR)
     {
@@ -172,13 +153,28 @@ void ServerManager::receiveMessage(SOCKET _Socket)
     }
     else
     {
-        std::cout << mTextRecieveBuffer << std::endl;
+        Dataform receivedData = {};
+        memcpy(&receivedData, mRecieveBuffer, DATA_SIZE);
+
+        switch (receivedData.PacketType)
+        {
+        case ePacketType::UserJoin:
+            std::cout << "userjoin socket" << std::endl;
+            std::cout << receivedData.message << std::endl;
+            break;
+        case ePacketType::Message:
+            std::cout << "message socket" << std::endl;
+            std::cout << receivedData.name << std::endl;
+            std::cout << receivedData.message << std::endl;
+            break;
+        default:
+            break;
+        }
+
     }
 }
 
-void ServerManager::receiveData()
-{
-}
+
 
 void ServerManager::makeConnection(SOCKET _Socket, sockaddr_in _ServerAddr)
 {
@@ -205,21 +201,3 @@ void ServerManager::ErrorHandling(const std::wstring& message)
 //    exit(1);
 }
 
-void ServerManager::sendMessage(std::string _Message)
-{
-}
-
-void ServerManager::sendData()
-{
-    const char* Buffer = reinterpret_cast<const char*>(&mData);
-
-    mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
-    if (mSendTest == SOCKET_ERROR)
-    {
-        ErrorHandling(L"send() error!");
-    }
-    else
-    {
-        UtilFunction::ClearConsoleLine();
-    }
-}
