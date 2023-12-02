@@ -28,7 +28,7 @@ int main()
     std::thread sendThread(ServerManager::sendMessage, ePacketType::Message);
     sendThread.detach();
 
-    std::thread receiveThread(ServerManager::chatReceive);
+    std::thread receiveThread(ServerManager::receiveMessage);
     receiveThread.detach();
 
     // 여기서 서버가 닫혔는지 클라이언트가 종료할건지 말건지 판단한다

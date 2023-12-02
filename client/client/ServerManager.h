@@ -41,8 +41,6 @@ public:
     static void convertIP();
     static void connectToServer();
 
-    static void chatReceive();
-
     static void disConnect();
 
     static void ErrorHandling(const std::wstring& message);

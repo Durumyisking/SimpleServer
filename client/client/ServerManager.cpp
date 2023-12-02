@@ -139,13 +139,11 @@ void ServerManager::receiveMessage()
             switch (receivedData.PacketType)
             {
             case ePacketType::UserJoin:
-                std::cout << "userjoin socket" << std::endl;
-                std::cout << receivedData.message << std::endl;
+                std::cout << receivedData.name << "´ÔÀÌ ÀÔÀåÇÏ¼Ì½À´Ï´Ù." << std::endl;
                 break;
             case ePacketType::Message:
-                std::cout << "message socket" << std::endl;
-                std::cout << receivedData.name << std::endl;
-                std::cout << receivedData.message << std::endl;
+                std::cout << receivedData.name << "´ÔÀÇ ¸Þ½ÃÁö : " 
+                    << receivedData.message << std::endl;
                 break;
             default:
                 break;

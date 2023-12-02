@@ -83,8 +83,6 @@ int main()
         // 서버가 도는동안 새로운 클라이언트를 계속 받을거기 때문에 while문안에서 클라이언트 받음
         sockaddr_in clientAddr;
 
-        SOCKET joinSocket;
-
         SOCKET clientSocket;
         AcceptClient(clientAddr, clientSocket);
     }
@@ -185,7 +183,7 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
         if (ReceiveTest)
         {
             // 클라이언트 입장알림
-
+            ReceivedData.PacketType = ePacketType::UserJoin;
             SendMessageToAllClient(ReceivedData);
                         
             // 새로 들어온 클라이언트 새 쓰레드에 올림
@@ -220,16 +218,6 @@ void HandleClient(SOCKET _clientSocket, Dataform _Data)
 void SendMessageToAllClient(const Dataform& data)
 {
     SendTest = 0;
-
-    //switch (data.PacketType)
-    //{
-    //case ePacketType::UserJoin:
-    //    break;
-    //case ePacketType::Message:
-    //    break;
-    //default:
-    //    break;
-    //}
 
     const char* Buffer = reinterpret_cast<const char*>(&data);
     for (size_t i = 0; i < ClientSockets.size(); i++)
