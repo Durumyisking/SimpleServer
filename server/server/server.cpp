@@ -39,6 +39,8 @@ void AcceptClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
 void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket);
 void ErrorHandling(const std::wstring& _message);
 void HandleClient(SOCKET _clientSocket, Dataform _Data);
+void SendMessageToAllClient(const Dataform& data);
+void ReceiveMessageFromClient();
 void PrintServerInfo(sockaddr_in _localAddr);
 void PrintIPAddr();
 void SendMessageToAllClient(std::vector<SOCKET> _Sockets, const char* _Message, int _MessageLength);
@@ -183,12 +185,10 @@ void JoinClient(sockaddr_in& _clientAddr, SOCKET& _clientSocket)
         if (ReceiveTest)
         {
             // 클라이언트 입장알림
-            std::string str = {};
-            str = ReceivedData.name;
-            str += " 님이 입장했습니다.\n";
-            SendMessageToAllClient(ClientSockets, str.c_str(), str.length());
+
+            SendMessageToAllClient(ReceivedData);
                         
-            // 새로 들어온 클랑
+            // 새로 들어온 클라이언트 새 쓰레드에 올림
             std::thread clientThread(HandleClient, _clientSocket, ReceivedData);
             clientThread.detach();
         }
@@ -209,24 +209,41 @@ void HandleClient(SOCKET _clientSocket, Dataform _Data)
         // 정상적으로 받았으면 해당 메시지 모든 클라에게 보낸다.
         if (ReceiveTest)
         {
-            std::cout << _Data.name << "님의 메시지 : " << _Data.message << std::endl;
-
-            for (size_t i = 0; i < ClientSockets.size(); i++)
-            {
-                SendTest = send(ClientSockets[i], reinterpret_cast<const char*>(&_Data), DATA_SIZE, 0);
-                if (SendTest == SOCKET_ERROR)
-                {
-                    ErrorHandling(L"send() error!");
-                    break;
-                }
-            }
-            ZeroMemory(&_Data, DATA_SIZE);
+            SendMessageToAllClient(_Data);
         }
         else
         {
             break;
         }
     }
+}
+void SendMessageToAllClient(const Dataform& data)
+{
+    SendTest = 0;
+
+    //switch (data.PacketType)
+    //{
+    //case ePacketType::UserJoin:
+    //    break;
+    //case ePacketType::Message:
+    //    break;
+    //default:
+    //    break;
+    //}
+
+    const char* Buffer = reinterpret_cast<const char*>(&data);
+    for (size_t i = 0; i < ClientSockets.size(); i++)
+    {
+        SendTest = send(ClientSockets[i], Buffer, DATA_SIZE, 0);
+        if (SendTest == SOCKET_ERROR)
+        {
+            ErrorHandling(L"send() error!");
+            break;
+        }
+    }
+}
+void ReceiveMessageFromClient()
+{
 }
 void ErrorHandling(const std::wstring& _message)
 {

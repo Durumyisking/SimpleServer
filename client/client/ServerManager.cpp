@@ -81,96 +81,77 @@ void ServerManager::connectToServer()
 }
 
 
-void ServerManager::chatReceive()
-{
-    while (1)
-    {
-        int ReceiveTest = 0;
-        ZeroMemory(mRecieveBuffer, MAX_BUFFER_SIZE);
-        ReceiveTest = recv(mSocket, mRecieveBuffer, MAX_BUFFER_SIZE, 0);
-        if (ReceiveTest == SOCKET_ERROR)
-        {
-            ErrorHandling(L"recv() error!");
-        }
-        else if (ReceiveTest == 0)
-        {
-            ErrorHandling(L"Server disconnected.");
-        }
-        else
-        {
-            Dataform receivedData = {};
-            memcpy(&receivedData, mRecieveBuffer, DATA_SIZE);
-            std::cout << receivedData.name << "님의 메시지: " << receivedData.message << std::endl;
-            ZeroMemory(&receivedData, DATA_SIZE);
-        }
-    }
-}
-
 void ServerManager::sendMessage(ePacketType packetType)
 {
-    mData.PacketType = packetType;
-
-    switch (mData.PacketType)
+    while (mbWhileflag)
     {
-    case ePacketType::UserJoin:
-        break;
-    case ePacketType::Message:
-        gets_s(mData.message);
-        break;
-    default:
-        break;
-    }
+        mData.PacketType = packetType;
 
-    const char* Buffer = reinterpret_cast<const char*>(&mData);
-
-    mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
-    if (mSendTest == SOCKET_ERROR)
-    {
-        ErrorHandling(L"send() error!");
-    }
-    else
-    {
-        UtilFunction::ClearConsoleLine();
-    }
-}
-
-void ServerManager::receiveMessage()
-{
-    int ReceiveTest = 0;
-    // recv함수에 들어가면 client의 send를 받을 준비를 하는것
-    ZeroMemory(mRecieveBuffer, MAX_BUFFER_SIZE);
-    ReceiveTest = recv(mSocket, mRecieveBuffer, MAX_BUFFER_SIZE, 0);
-
-    if (ReceiveTest == SOCKET_ERROR)
-    {
-        ErrorHandling(L"recv() error!");
-        return;
-    }
-    else if (ReceiveTest == 0)
-    {
-        std::cout << "Client disconnected.\n" << std::endl;
-        return;
-    }
-    else
-    {
-        Dataform receivedData = {};
-        memcpy(&receivedData, mRecieveBuffer, DATA_SIZE);
-
-        switch (receivedData.PacketType)
+        switch (mData.PacketType)
         {
         case ePacketType::UserJoin:
-            std::cout << "userjoin socket" << std::endl;
-            std::cout << receivedData.message << std::endl;
             break;
         case ePacketType::Message:
-            std::cout << "message socket" << std::endl;
-            std::cout << receivedData.name << std::endl;
-            std::cout << receivedData.message << std::endl;
+            gets_s(mData.message);
             break;
         default:
             break;
         }
 
+        const char* Buffer = reinterpret_cast<const char*>(&mData);
+
+        mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
+        if (mSendTest == SOCKET_ERROR)
+        {
+            ErrorHandling(L"send() error!");
+        }
+        else
+        {
+            UtilFunction::ClearConsoleLine();
+        }
+    }
+}
+
+void ServerManager::receiveMessage()
+{
+    while (mbWhileflag)
+    {
+        int ReceiveTest = 0;
+        // recv함수에 들어가면 client의 send를 받을 준비를 하는것
+        ZeroMemory(mRecieveBuffer, MAX_BUFFER_SIZE);
+        ReceiveTest = recv(mSocket, mRecieveBuffer, MAX_BUFFER_SIZE, 0);
+
+        if (ReceiveTest == SOCKET_ERROR)
+        {
+            ErrorHandling(L"recv() error!");
+            return;
+        }
+        else if (ReceiveTest == 0)
+        {
+            std::cout << "Client disconnected.\n" << std::endl;
+            return;
+        }
+        else
+        {
+            Dataform receivedData = {};
+            memcpy(&receivedData, mRecieveBuffer, DATA_SIZE);
+
+            switch (receivedData.PacketType)
+            {
+            case ePacketType::UserJoin:
+                std::cout << "userjoin socket" << std::endl;
+                std::cout << receivedData.message << std::endl;
+                break;
+            case ePacketType::Message:
+                std::cout << "message socket" << std::endl;
+                std::cout << receivedData.name << std::endl;
+                std::cout << receivedData.message << std::endl;
+                break;
+            default:
+                break;
+            }
+
+        }
     }
 }
 
