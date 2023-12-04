@@ -36,8 +36,8 @@ void ServerManager::initialize()
 void ServerManager::setServerIP()
 {
     std::cout << "Input Connect Server IP: ";
-    gets_s(mServerIP);
-
+    //gets_s(mServerIP);
+    //mServerIP = "127.0.0.1";
     // 127.0.0.1 = 로컬 호스트 주소 (현재 컴퓨터 자체를 가리킴 서버와 클라이언트가 동일한 pc에서 실행 및 통신 원할때 사용)
 //    mServerIP = LOCALHOST_IP;
 }
@@ -53,15 +53,16 @@ void ServerManager::createSocket(SOCKET& _Socket)
 
 void ServerManager::convertIP()
 {
-    mServerAddr.sin_family = AF_INET;
+    mServerAddr.sin_family = AF_INET; 
     mServerAddr.sin_port = htons(DEFAULT_PORT);
-    inet_pton(AF_INET, mServerIP, &(mServerAddr.sin_addr));
+    inet_pton(AF_INET, "127.0.0.1", &(mServerAddr.sin_addr));
 }
 
 void ServerManager::connectToServer()
 {
     std::cout << "닉네임을 입력하세요 : ";
     gets_s(mData.name);
+
     while (ID_SIZE < sizeof(mData.name))
     {       
         ZeroMemory(mData.name, ID_SIZE);
@@ -73,15 +74,15 @@ void ServerManager::connectToServer()
     std::cout << "Connected to the server.\n\n";
 
     // 자기자신 입장알리는것
-    sendMessage(ePacketType::UserJoin);
-    receiveMessage();
+    sendMessage(ePacketType::UserJoin, true);
+    receiveMessage(true);
 
     std::cout << "연결되었습니다! 이제 자유롭게 메시지를 입력하세요" << std::endl;
 
 }
 
 
-void ServerManager::sendMessage(ePacketType packetType)
+void ServerManager::sendMessage(ePacketType packetType, bool bOnce)
 {
     while (mbWhileflag)
     {
@@ -92,7 +93,19 @@ void ServerManager::sendMessage(ePacketType packetType)
         case ePacketType::UserJoin:
             break;
         case ePacketType::Message:
-            gets_s(mData.message);
+            while (1)
+            {
+                gets_s(mData.message);
+                
+                if ('\0' == mData.message[0])
+                {
+                    int i = 0;
+                }
+                else
+                {
+                    break;
+                }
+            }
             break;
         default:
             break;
@@ -109,17 +122,20 @@ void ServerManager::sendMessage(ePacketType packetType)
         {
             UtilFunction::ClearConsoleLine();
         }
+
+        if (bOnce)
+            break;
     }
 }
 
-void ServerManager::receiveMessage()
+void ServerManager::receiveMessage(bool bOnce)
 {
     while (mbWhileflag)
     {
         int ReceiveTest = 0;
         // recv함수에 들어가면 client의 send를 받을 준비를 하는것
         ZeroMemory(mRecieveBuffer, MAX_BUFFER_SIZE);
-        ReceiveTest = recv(mSocket, mRecieveBuffer, MAX_BUFFER_SIZE, 0);
+        ReceiveTest = recv(mSocket, mRecieveBuffer, DATA_SIZE, 0);
 
         if (ReceiveTest == SOCKET_ERROR)
         {
@@ -133,23 +149,26 @@ void ServerManager::receiveMessage()
         }
         else
         {
-            Dataform receivedData = {};
-            memcpy(&receivedData, mRecieveBuffer, DATA_SIZE);
+            Dataform* receivedData = reinterpret_cast<Dataform*>(&mRecieveBuffer);
 
-            switch (receivedData.PacketType)
+            std::cout << " ";
+            switch (receivedData->PacketType)
             {
             case ePacketType::UserJoin:
-                std::cout << receivedData.name << "님이 입장하셨습니다." << std::endl;
+                std::cout << receivedData->name << "님이 입장하셨습니다." << std::endl;
                 break;
             case ePacketType::Message:
-                std::cout << receivedData.name << "님의 메시지 : " 
-                    << receivedData.message << std::endl;
+                std::cout << receivedData->name << "님의 메시지 : "
+                    << receivedData->message << std::endl;
                 break;
             default:
                 break;
             }
 
         }
+
+        if (bOnce)
+            break;
     }
 }
 

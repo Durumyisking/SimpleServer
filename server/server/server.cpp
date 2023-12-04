@@ -85,7 +85,7 @@ int main()
 
         SOCKET clientSocket;
         AcceptClient(clientAddr, clientSocket);
-    }
+    }   
 
     // 연결된 클라이언트 소켓을 닫음
     CloseServer();
@@ -97,6 +97,7 @@ int main()
 void Initialize()
 {
     Version = MAKEWORD(2, 2);
+    size_t s = sizeof(Version);
     int wsResult = WSAStartup(Version, &WSdata);
     if (wsResult != 0)
     {
@@ -109,7 +110,8 @@ void Initialize()
 }
 
 void CreateSocket()
-{
+{                   // ip v4형식      SOCK_STREAM : AF_INET v4,v6에서 TCP를 사용
+                    //               SOCK_DGRAM : UDP에서 사용
     ServerSocket = socket(AF_INET, SOCK_STREAM, 0); // 서버 소켓 생성
     if (ServerSocket == INVALID_SOCKET)
     {

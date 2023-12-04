@@ -44,8 +44,8 @@ public:
     static void disConnect();
 
     static void ErrorHandling(const std::wstring& message);
-    static void sendMessage(ePacketType packetType);
-    static void receiveMessage();
+    static void sendMessage(ePacketType packetType, bool bOnce = false);
+    static void receiveMessage(bool bOnce = false);
 
 private:
     static void makeConnection(SOCKET _Socket, sockaddr_in _ServerAddr);

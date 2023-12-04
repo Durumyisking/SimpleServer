@@ -25,10 +25,10 @@ int main()
     // 플레이어 입장 채팅 송수신 전부 다른쓰레드에서 동작해야함
 
 
-    std::thread sendThread(ServerManager::sendMessage, ePacketType::Message);
+    std::thread sendThread(ServerManager::sendMessage, ePacketType::Message, false);
     sendThread.detach();
 
-    std::thread receiveThread(ServerManager::receiveMessage);
+    std::thread receiveThread(ServerManager::receiveMessage, false);
     receiveThread.detach();
 
     // 여기서 서버가 닫혔는지 클라이언트가 종료할건지 말건지 판단한다
