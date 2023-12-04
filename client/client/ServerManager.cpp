@@ -31,6 +31,16 @@ void ServerManager::initialize()
     {
         std::cout << "Winsock2 library initialized.\n";
     }
+
+    setServerIP();
+    createSocket(mSocket);
+
+    std::cout << "Sockets are created.\n";
+    // ip 컨버트
+    ServerManager::convertIP();
+    // 연결
+    ServerManager::connectToServer();
+
 }
 
 void ServerManager::setServerIP()

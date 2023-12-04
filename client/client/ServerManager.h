@@ -7,6 +7,10 @@
 #include <stdio.h>
 #include <thread>
 
+#include <imgui.h>
+#include <imgui_impl_win32.h>
+#include <memory>
+
 #define DEFAULT_PORT   8080
 #define MAX_BUFFER_SIZE 2048
 
