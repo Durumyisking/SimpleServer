@@ -7,9 +7,13 @@
 #include <stdio.h>
 #include <thread>
 
+#include <d3d11.h>
+#include <d3dcompiler.h>
 #include <imgui.h>
+#include <imgui_impl_dx11.h>
 #include <imgui_impl_win32.h>
 #include <memory>
+#include <wrl.h> // ComPtr
 
 #define DEFAULT_PORT   8080
 #define MAX_BUFFER_SIZE 2048

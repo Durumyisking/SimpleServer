@@ -1,14 +1,12 @@
-
-#include "ServerManager.h"
-
-
+#include "Application.h"
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+void UpdateGUI();
 
 int main()
 {
 
-    const int width = 700, height = 400;
+    const int width = 1280, height = 960;
     const int canvasWidth = width / 80, canvasHeight = height / 80;
 
     WNDCLASSEX wc = {
@@ -47,6 +45,8 @@ int main()
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 
+    auto application = std::make_unique<Application>(hwnd, width, height, canvasWidth, canvasHeight);
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -55,10 +55,15 @@ int main()
     io.Fonts->Build();
     ImGui::StyleColorsLight();
 
+    if (!ImGui_ImplDX11_Init(application->device, application->deviceContext))
+    {
+        std::cout << "GUI Dx11 초기화 실패!!" << std::endl;
+        return 0;
+    }
     if (!ImGui_ImplWin32_Init(hwnd))
     {
         std::cout << "GUI Win32 초기화 실패!!" << std::endl;
-        return 0;
+        return 0;   
     }
 
     // 서버 이니셜라이즈
@@ -85,6 +90,7 @@ int main()
         else
         {
             // Start the Dear ImGui frame
+            ImGui_ImplDX11_NewFrame();//TODO: IMGUI 사용
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
             ImGui::Begin("Background Color");
@@ -93,6 +99,14 @@ int main()
                 ImGui::GetIO().Framerate);
             ImGui::End();
             ImGui::Render();
+
+            application->Update();
+            application->Render();
+
+            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());//TODO: IMGUI 사용
+
+            // switch the back buffer and the front buffer
+            application->swapChain->Present(1, 0);
         }
     }
 
@@ -145,4 +159,9 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
 
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+void UpdateGUI()
+{
+
 }
