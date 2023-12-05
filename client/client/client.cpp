@@ -51,10 +51,15 @@ int main()
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.DisplaySize = ImVec2(width, height);
+    io.Fonts->AddFontDefault();
+    io.Fonts->Build();
     ImGui::StyleColorsLight();
 
-    // Setup Platform/Renderer backends
-    ImGui_ImplWin32_Init(hwnd);
+    if (!ImGui_ImplWin32_Init(hwnd))
+    {
+        std::cout << "GUI Win32 초기화 실패!!" << std::endl;
+        return 0;
+    }
 
     // 서버 이니셜라이즈
     ServerManager::initialize();
@@ -83,6 +88,9 @@ int main()
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
             ImGui::Begin("Background Color");
+            ImGui::Text("Average %.3f ms/frame (%.1f FPS)",
+                1000.0f / ImGui::GetIO().Framerate,
+                ImGui::GetIO().Framerate);
             ImGui::End();
             ImGui::Render();
         }
