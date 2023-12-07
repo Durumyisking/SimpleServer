@@ -302,4 +302,6 @@ public:
 
 	int canvasWidth, canvasHeight;
 	float backgroundColor[4] = { 0.8f, 0.8f, 0.8f, 1.0f };
+
+
 };

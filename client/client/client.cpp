@@ -49,9 +49,11 @@ int main()
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImGui::StyleColorsDark();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.DisplaySize = ImVec2(width, height);
     io.Fonts->AddFontDefault();
+    io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/malgun.ttf", 18.f, NULL, io.Fonts->GetGlyphRangesKorean());
     io.Fonts->Build();
     ImGui::StyleColorsLight();
 
@@ -69,15 +71,6 @@ int main()
     // 서버 이니셜라이즈
     ServerManager::initialize();
 
-    // 메시지 송수신
-    // 플레이어 입장 채팅 송수신 전부 다른쓰레드에서 동작해야함
-    std::thread sendThread(ServerManager::sendMessage, ePacketType::Message, false);
-    sendThread.detach();
-
-    std::thread receiveThread(ServerManager::receiveMessage, false);
-    receiveThread.detach();
-
-
     // Main message loop
     MSG msg = {};
     while (WM_QUIT != msg.message)
@@ -93,11 +86,11 @@ int main()
             ImGui_ImplDX11_NewFrame();//TODO: IMGUI 사용
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
-            ImGui::Begin("Background Color");
-            ImGui::Text("Average %.3f ms/frame (%.1f FPS)",
-                1000.0f / ImGui::GetIO().Framerate,
-                ImGui::GetIO().Framerate);
-            ImGui::End();
+
+            ImGui::Begin("채팅채팅");
+
+            UpdateGUI();
+
             ImGui::Render();
 
             application->Update();
@@ -163,5 +156,22 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 void UpdateGUI()
 {
+    ImGui::Text("Average %.3f ms/frame (%.1f FPS)",
+        1000.0f / ImGui::GetIO().Framerate,
+        ImGui::GetIO().Framerate);
+
+    if (!ServerManager::mbIsConnected)
+    {
+        // ip설정
+        ServerManager::setServerIP();
+
+        // 연결
+        ServerManager::connectToServer();
+
+    }
+    else
+    {
+
+    }
 
 }
