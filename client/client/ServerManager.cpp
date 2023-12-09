@@ -36,12 +36,18 @@ void ServerManager::initialize()
 
 void ServerManager::setServerIP()
 {
-    ImGui::InputTextWithHint("", "서버 IP를 입력하세요 (ex-> xxx.xxx.xxx...)", ServerManager::mServerIP, sizeof(ServerManager::mServerIP));
+    ImGui::BeginChild(u8"채팅창");
+    ImGui::InputTextWithHint("##InputText1", "서버 IP를 입력하세요 (ex-> xxx.xxx.xxx...)", ServerManager::mServerIP, sizeof(ServerManager::mServerIP));
+    ImGui::SameLine();
     // 127.0.0.1 = 로컬 호스트 주소 (현재 컴퓨터 자체를 가리킴 서버와 클라이언트가 동일한 pc에서 실행 및 통신 원할때 사용)
     //  mServerIP = LOCALHOST_IP;
 
-        // ip 컨버트
-    ServerManager::convertIP();
+    // ip 컨버트
+
+    if (ImGui::Button("확인"))
+    {
+        ServerManager::convertIP();
+    }
 }
 
 void ServerManager::createSocket(SOCKET& _Socket)
