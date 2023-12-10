@@ -55,11 +55,11 @@ public:
     static void sendMessage(ePacketType packetType, bool bOnce = false);
     static void receiveMessage(bool bOnce = false);
 
+    static void setUserNickName();
 private:
     static bool makeConnection(SOCKET _Socket, sockaddr_in _ServerAddr);
     static void participateUserThreads();
     static void processCurrentUserJoin();
-    static void setUserNickName();
 
 public:
     static WSADATA          mWSdata;
@@ -80,7 +80,9 @@ public:
     // while flag
     static bool mbWhileflag;
     static bool mbSwitch;
-    static bool mbIsConnected;
+
+    static int mbIsConnected;
+    static bool mbIsNicknameSet;
 
 };
 

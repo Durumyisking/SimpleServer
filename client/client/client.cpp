@@ -52,7 +52,7 @@ int main()
     ImGui::StyleColorsDark();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.DisplaySize = ImVec2(width, height);
-    io.Fonts->AddFontDefault();
+    //io.Fonts->AddFontDefault();
     io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/malgun.ttf", 18.f, NULL, io.Fonts->GetGlyphRangesKorean());
     io.Fonts->Build();
     ImGui::StyleColorsLight();
@@ -87,12 +87,11 @@ int main()
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
 
-            ImGui::Begin("채팅채팅");
+            ImGui::Begin(u8"채팅채팅");
 
             UpdateGUI();
-
+            ImGui::End();
             ImGui::Render();
-
             application->Update();
             application->Render();
 
@@ -160,17 +159,19 @@ void UpdateGUI()
         1000.0f / ImGui::GetIO().Framerate,
         ImGui::GetIO().Framerate);
 
-    if (!ServerManager::mbIsConnected)
+    if (!ServerManager::mbIsConnected || ServerManager::mbIsConnected == -1)
     {
         // ip설정
         ServerManager::setServerIP();
-
-        // 연결
-        ServerManager::connectToServer();
+        
 
     }
     else
     {
+        if (!ServerManager::mbIsNicknameSet)
+        {
+            ServerManager::setUserNickName();
+        }
 
     }
 

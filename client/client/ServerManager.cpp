@@ -16,7 +16,9 @@ int              ServerManager::mSendTest = 0;
 
 bool ServerManager::mbWhileflag = true;
 bool ServerManager::mbSwitch = true;
-bool ServerManager::mbIsConnected = false;
+
+int ServerManager::mbIsConnected = 0;
+bool ServerManager::mbIsNicknameSet = false;
 
 
 
@@ -37,17 +39,25 @@ void ServerManager::initialize()
 void ServerManager::setServerIP()
 {
     ImGui::BeginChild(u8"채팅창");
-    ImGui::InputTextWithHint("##InputText1", "서버 IP를 입력하세요 (ex-> xxx.xxx.xxx...)", ServerManager::mServerIP, sizeof(ServerManager::mServerIP));
+
+    if (mbIsConnected == -1)
+    {
+        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f,1.f), u8"올바르지 않은 IP입니다 다시 입력해주세요");
+    }
+
+    ImGui::InputTextWithHint(u8"##InputTextWithHint1", u8"서버 IP를 입력하세요 (ex-> xxx.xxx.xxx...)", ServerManager::mServerIP, sizeof(ServerManager::mServerIP));
     ImGui::SameLine();
     // 127.0.0.1 = 로컬 호스트 주소 (현재 컴퓨터 자체를 가리킴 서버와 클라이언트가 동일한 pc에서 실행 및 통신 원할때 사용)
     //  mServerIP = LOCALHOST_IP;
 
     // ip 컨버트
 
-    if (ImGui::Button("확인"))
+    if (ImGui::Button(u8"확인"))
     {
         ServerManager::convertIP();
+        ServerManager::connectToServer();
     }
+    ImGui::EndChild();
 }
 
 void ServerManager::createSocket(SOCKET& _Socket)
@@ -63,7 +73,7 @@ void ServerManager::convertIP()
 {
     mServerAddr.sin_family = AF_INET; 
     mServerAddr.sin_port = htons(DEFAULT_PORT);
-    inet_pton(AF_INET, mServerIP, &(mServerAddr.sin_addr));
+    inet_pton(AF_INET, "127.0.0.1", &(mServerAddr.sin_addr));
 }
 
 void ServerManager::connectToServer()
@@ -73,15 +83,11 @@ void ServerManager::connectToServer()
         createSocket(mSocket);
     }
 
-    std::cout << "Sockets are created.\n";
-
-    if (makeConnection(mSocket, mServerAddr))
+    if (!makeConnection(mSocket, mServerAddr))
     {
         return;
     }
     std::cout << "Connected to the server.\n\n";
-
-    setUserNickName();
 }
 
 
@@ -185,11 +191,12 @@ bool ServerManager::makeConnection(SOCKET _Socket, sockaddr_in _ServerAddr)
         //closesocket(_Socket);
         //ErrorHandling(L"connect() error!");
         ZeroMemory(mServerIP, MAX_BUFFER_SIZE);
+        ServerManager::mbIsConnected = -1;
         return false;
     }
     else
     {
-        ServerManager::mbIsConnected = true;
+        ServerManager::mbIsConnected = 1;
         return true;
     }
 
@@ -220,16 +227,11 @@ void ServerManager::processCurrentUserJoin()
 
 void ServerManager::setUserNickName()
 {
-    ImGui::InputTextWithHint("", "닉네임을 정해주세요", mData.name, sizeof(mData.name));
+    ImGui::InputTextWithHint("##InputTextWithHint2", u8"닉네임을 정해주세요", mData.name, sizeof(mData.name));
     ImGui::SameLine();
-    if (ImGui::Button("결정"))
-    {
-        if (ID_SIZE < sizeof(mData.name))
-        {
-            ZeroMemory(mData.name, ID_SIZE);
-            std::cout << "20자 이내의 닉네임을 입력하셔야합니다. 다시 입력해주세요." << std::endl;
-            std::cout << "닉네임을 입력하세요 : ";
-        }
+    if (ImGui::Button(u8"결정"))
+    {     
+        mbIsNicknameSet = true;      
     }
 }
 
