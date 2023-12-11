@@ -14,6 +14,7 @@
 #include <imgui_impl_win32.h>
 #include <memory>
 #include <wrl.h> // ComPtr
+#include <vector>
 
 #define DEFAULT_PORT   8080
 #define MAX_BUFFER_SIZE 2048
@@ -68,6 +69,7 @@ public:
     static sockaddr_in      mServerAddr;
 
     static char             mRecieveBuffer[MAX_BUFFER_SIZE];
+    static std::vector<Dataform>      mDataTable;
     static char             mServerIP[MAX_BUFFER_SIZE];
     static Dataform         mData;
 
@@ -83,6 +85,8 @@ public:
 
     static int mbIsConnected;
     static bool mbIsNicknameSet;
+
+    static bool mbIsMsgSent;
 
 };
 

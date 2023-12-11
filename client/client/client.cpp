@@ -163,14 +163,28 @@ void UpdateGUI()
     {
         // ip설정
         ServerManager::setServerIP();
-        
-
     }
     else
     {
         if (!ServerManager::mbIsNicknameSet)
         {
             ServerManager::setUserNickName();
+        }
+        else
+        {
+            for (Dataform dataform : ServerManager::mDataTable)
+            {
+                ImGui::Text(dataform.name);
+                ImGui::SameLine();
+                ImGui::Text(dataform.message);
+            }
+            
+            ImGui::InputTextWithHint("##SendMsgTxtBox", u8"메시지를 입력해주세요", ServerManager::mData.message, MSG_SIZE);
+            ImGui::SameLine();
+            if (ImGui::Button(u8"전송"))
+            {
+                ServerManager::mbIsMsgSent = true;
+            }
         }
 
     }

@@ -1,6 +1,5 @@
 #pragma once
 #include "ServerManager.h"
-#include <vector>
 
 // 수학의 4차원 벡터(vector)를 의미합니다. 
 // std::vector와는 다릅니다.

@@ -19,8 +19,8 @@ bool ServerManager::mbSwitch = true;
 
 int ServerManager::mbIsConnected = 0;
 bool ServerManager::mbIsNicknameSet = false;
-
-
+bool ServerManager::mbIsMsgSent = false;
+std::vector<Dataform>      ServerManager::mDataTable = {};
 
 void ServerManager::initialize()
 {
@@ -38,7 +38,7 @@ void ServerManager::initialize()
 
 void ServerManager::setServerIP()
 {
-    ImGui::BeginChild(u8"채팅창");
+
 
     if (mbIsConnected == -1)
     {
@@ -57,7 +57,7 @@ void ServerManager::setServerIP()
         ServerManager::convertIP();
         ServerManager::connectToServer();
     }
-    ImGui::EndChild();
+
 }
 
 void ServerManager::createSocket(SOCKET& _Socket)
@@ -95,41 +95,34 @@ void ServerManager::sendMessage(ePacketType packetType, bool bOnce)
 {
     while (mbWhileflag)
     {
-        mData.PacketType = packetType;
-
-        switch (mData.PacketType)
+        if (mbIsMsgSent)
         {
-        case ePacketType::UserJoin:
-            break;
-        case ePacketType::Message:
-            while (1)
+            mData.PacketType = packetType;
+
+            switch (mData.PacketType)
             {
-                gets_s(mData.message);
-                
+            case ePacketType::UserJoin:
+                break;
+            case ePacketType::Message:
+                    
                 if ('\0' == mData.message[0])
                 {
-                    int i = 0;
+                    return;
                 }
-                else
-                {
-                    break;
-                }
+                break;
+            default:
+                break;
             }
-            break;
-        default:
-            break;
-        }
 
-        const char* Buffer = reinterpret_cast<const char*>(&mData);
+            const char* Buffer = reinterpret_cast<const char*>(&mData);
 
-        mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
-        if (mSendTest == SOCKET_ERROR)
-        {
-            ErrorHandling(L"send() error!");
-        }
-        else
-        {
-            UtilFunction::ClearConsoleLine();
+            mSendTest = send(mSocket, Buffer, DATA_SIZE, 0);
+            if (mSendTest == SOCKET_ERROR)
+            {
+                ErrorHandling(L"send() error!");
+            }
+            ZeroMemory(&mData.message, MSG_SIZE);
+            mbIsMsgSent = false;
         }
 
         if (bOnce)
@@ -159,21 +152,7 @@ void ServerManager::receiveMessage(bool bOnce)
         else
         {
             Dataform* receivedData = reinterpret_cast<Dataform*>(&mRecieveBuffer);
-
-            std::cout << " ";
-            switch (receivedData->PacketType)
-            {
-            case ePacketType::UserJoin:
-                std::cout << receivedData->name << "님이 입장하셨습니다." << std::endl;
-                break;
-            case ePacketType::Message:
-                std::cout << receivedData->name << "님의 메시지 : "
-                    << receivedData->message << std::endl;
-                break;
-            default:
-                break;
-            }
-
+            mDataTable.push_back(*receivedData);
         }
 
         if (bOnce)
@@ -218,6 +197,7 @@ void ServerManager::participateUserThreads()
 void ServerManager::processCurrentUserJoin()
 {
     // 자기자신 입장알리는것
+    mbIsMsgSent = true;
     sendMessage(ePacketType::UserJoin, true);
     receiveMessage(true);
 
@@ -232,6 +212,8 @@ void ServerManager::setUserNickName()
     if (ImGui::Button(u8"결정"))
     {     
         mbIsNicknameSet = true;      
+
+        processCurrentUserJoin();
     }
 }
 
