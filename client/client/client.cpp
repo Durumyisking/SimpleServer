@@ -172,16 +172,38 @@ void UpdateGUI()
         }
         else
         {
-            for (Dataform dataform : ServerManager::mDataTable)
+            for (const Dataform& dataform : ServerManager::mDataTable)
             {
-                ImGui::Text(dataform.name);
-                ImGui::SameLine();
-                ImGui::Text(dataform.message);
+                ImVec4 txtcolor = {};
+                if (!strcmp(ServerManager::mData.name, dataform.name))
+                {
+                    txtcolor = {0.f, 1.f, 0.f, 1.f};
+                }
+                else
+                {
+                    txtcolor = { 1.f, 0.f, 1.f, 1.f };
+                }
+
+                if (dataform.PacketType == ePacketType::UserJoin)
+                {
+                    ImGui::TextColored(txtcolor, dataform.name);
+                    ImGui::SameLine();
+                    ImGui::Text(u8" 님이 입장하셨습니다.");
+                }
+                else if (dataform.PacketType == ePacketType::Message)
+                {
+                    ImGui::TextColored(txtcolor, dataform.name);
+                    ImGui::SameLine();
+                    ImGui::Text(" : ");
+                    ImGui::SameLine();
+                    ImGui::Text(dataform.message);
+                }
+
             }
             
             ImGui::InputTextWithHint("##SendMsgTxtBox", u8"메시지를 입력해주세요", ServerManager::mData.message, MSG_SIZE);
             ImGui::SameLine();
-            if (ImGui::Button(u8"전송"))
+            if (ImGui::Button(u8"전송") || (ImGui::IsKeyPressed(ImGuiKey_Enter) ))
             {
                 ServerManager::mbIsMsgSent = true;
             }

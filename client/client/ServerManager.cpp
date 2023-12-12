@@ -38,13 +38,12 @@ void ServerManager::initialize()
 
 void ServerManager::setServerIP()
 {
-
-
     if (mbIsConnected == -1)
     {
         ImGui::TextColored(ImVec4(1.f, 0.f, 0.f,1.f), u8"올바르지 않은 IP입니다 다시 입력해주세요");
     }
 
+    ImGui::AlignTextToFramePadding();
     ImGui::InputTextWithHint(u8"##InputTextWithHint1", u8"서버 IP를 입력하세요 (ex-> xxx.xxx.xxx...)", ServerManager::mServerIP, sizeof(ServerManager::mServerIP));
     ImGui::SameLine();
     // 127.0.0.1 = 로컬 호스트 주소 (현재 컴퓨터 자체를 가리킴 서버와 클라이언트가 동일한 pc에서 실행 및 통신 원할때 사용)
@@ -52,12 +51,11 @@ void ServerManager::setServerIP()
 
     // ip 컨버트
 
-    if (ImGui::Button(u8"확인"))
+    if (ImGui::Button(u8"확인") || (ImGui::IsKeyPressed(ImGuiKey_Enter)))
     {
         ServerManager::convertIP();
         ServerManager::connectToServer();
     }
-
 }
 
 void ServerManager::createSocket(SOCKET& _Socket)
@@ -209,7 +207,7 @@ void ServerManager::setUserNickName()
 {
     ImGui::InputTextWithHint("##InputTextWithHint2", u8"닉네임을 정해주세요", mData.name, sizeof(mData.name));
     ImGui::SameLine();
-    if (ImGui::Button(u8"결정"))
+    if (ImGui::Button(u8"결정") || (ImGui::IsKeyPressed(ImGuiKey_Enter)))
     {     
         mbIsNicknameSet = true;      
 
